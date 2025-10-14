@@ -1,0 +1,28 @@
+services:
+  network:
+    networks:
+      - mazadak
+
+  service-base-config:
+    extends:
+      service: network
+    environment:
+      SPRING_KAFKA_BOOTSTRAP-SERVERS: broker:9092
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+
+  config-server-config:
+    extends:
+      service: service-base-config
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:18071/
+
+  eureka-config:
+    extends:
+      service: config-server-config
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:18050/eureka/
+
+
