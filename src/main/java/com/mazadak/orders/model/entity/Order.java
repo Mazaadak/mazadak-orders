@@ -21,8 +21,6 @@ import java.util.UUID;
 public class Order extends BaseEntity {
     private UUID buyerId;
 
-    private UUID sellerId;
-
     @Enumerated(EnumType.STRING)
     private OrderType type;
 

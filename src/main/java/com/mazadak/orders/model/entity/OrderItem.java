@@ -19,6 +19,8 @@ import java.util.UUID;
 public class OrderItem extends BaseEntity{
     private UUID productId;
 
+    private UUID sellerId;
+
     private String productName;
 
     private String productImageUrl;

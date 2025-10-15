@@ -13,5 +13,5 @@ import java.util.UUID;
 /**
  * DTO for {@link com.mazadak.orders.model.entity.Order}
  */
-public record OrderResponse(UUID id, UUID buyerId, UUID sellerId, OrderType type, BigDecimal totalAmount, OrderStatus status, Address shippingAddress, PaymentStatus paymentStatus, List<OrderItemResponse> orderItems, String paymentIntentId, UUID auctionId, UUID cartId) implements Serializable {
+public record OrderResponse(UUID id, UUID buyerId, OrderType type, BigDecimal totalAmount, OrderStatus status, Address shippingAddress, PaymentStatus paymentStatus, List<OrderItemResponse> orderItems, String paymentIntentId, UUID auctionId, UUID cartId) implements Serializable {
   }

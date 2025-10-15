@@ -14,9 +14,6 @@ public class CreateTestOrderRequest {
     private UUID buyerId;
 
     @NotNull
-    private UUID sellerId;
-
-    @NotNull
     private OrderType type;
 
     private UUID cartId;

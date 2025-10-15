@@ -14,6 +14,9 @@ public class TestOrderItemRequest {
     @NotNull
     private UUID productId;
 
+    @NotNull
+    private UUID sellerId;
+
     @NotBlank
     private String productName;
 

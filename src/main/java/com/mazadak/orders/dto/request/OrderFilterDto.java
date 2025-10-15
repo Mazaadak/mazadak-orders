@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public record OrderFilterDto(
         UUID buyerId,
-        UUID sellerId,
+        List<UUID> sellerIds,
         OrderType type,
         BigDecimal minAmount,
         BigDecimal maxAmount,

@@ -1,6 +1,5 @@
 package com.mazadak.orders.controller;
 
-import com.mazadak.orders.dto.request.CreateOrderRequest;
 import com.mazadak.orders.dto.request.CreateTestOrderRequest;
 import com.mazadak.orders.dto.request.OrderFilterDto;
 import com.mazadak.orders.dto.request.TestOrderItemRequest;
@@ -52,7 +51,6 @@ public class OrderController {
     public ResponseEntity<Order> createTestOrder(@RequestBody CreateTestOrderRequest request) {
         Order order = new Order();
         order.setBuyerId(request.getBuyerId());
-        order.setSellerId(request.getSellerId());
         order.setType(request.getType());
         order.setStatus(OrderStatus.PENDING);
         order.setPaymentStatus(PaymentStatus.PENDING);

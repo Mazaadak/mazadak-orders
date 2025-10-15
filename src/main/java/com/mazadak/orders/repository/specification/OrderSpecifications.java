@@ -19,10 +19,17 @@ public class OrderSpecifications {
         };
     }
 
-    public static Specification<Order> hasSellerId(UUID sellerId) {
+    public static Specification<Order> hasSellerIds(List<UUID> sellerIds) {
         return (root, query, builder) -> {
-            if (sellerId == null) return null;
-            return builder.equal(root.get("sellerId"), sellerId);
+            if (sellerIds == null || sellerIds.isEmpty()) {
+                return null;
+            }
+
+            Join<Object, Object> items = root.join("orderItems");
+
+            query.distinct(true);
+
+            return items.get("sellerId").in(sellerIds);
         };
     }
 
@@ -49,7 +56,7 @@ public class OrderSpecifications {
         };
     }
 
-    public static Specification<Order> hasProductId(List<UUID> productIds) {
+    public static Specification<Order> hasProductIds(List<UUID> productIds) {
         return (root, query, builder) -> {
             if (productIds == null || productIds.isEmpty()) {
                 return null;
@@ -60,7 +67,6 @@ public class OrderSpecifications {
             query.distinct(true);
 
             return items.get("productId").in(productIds);
-
         };
     }
 
@@ -81,11 +87,11 @@ public class OrderSpecifications {
     public static Specification<Order> buildFromFilter(OrderFilterDto filter) {
         return Specification.allOf(
                 hasBuyerId(filter.buyerId()),
-                hasSellerId(filter.sellerId()),
+                hasSellerIds(filter.sellerIds()),
                 hasType(filter.type()),
                 hasAmountBetween(filter.minAmount(), filter.maxAmount()),
                 hasStatus(filter.status()),
-                hasProductId(filter.productIds()),
+                hasProductIds(filter.productIds()),
                 hasAuctionId(filter.auctionId()),
                 hasCartId(filter.cartId())
         );
