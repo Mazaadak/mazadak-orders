@@ -34,19 +34,19 @@ services:
       file: common-config.yml
       service: config-server-config
 
-  orders:
-    image: ghcr.io/mazaadak/orders:latest
-    container_name: orders
-    ports:
-      - 18088:18088
-    depends_on:
-      eurekaserver:
-        condition: service_healthy
-      temporal:
-        condition: service_healthy
-    extends:
-      file: common-config.yml
-      service: eureka-config
+#  orders:
+#    image: ghcr.io/mazaadak/mazadak-orders:latest
+#    container_name: orders
+#    ports:
+#      - 18088:18088
+#    depends_on:
+#      eurekaserver:
+#        condition: service_healthy
+#      temporal:
+#        condition: service_healthy
+#    extends:
+#      file: common-config.yml
+#      service: eureka-config
 
   broker:
     image: apache/kafka-native:4.0.1-rc2
