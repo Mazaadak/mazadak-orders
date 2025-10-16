@@ -12,4 +12,7 @@ public interface OrderService {
     OrderResponse getOrderById(UUID id);
     Page<OrderResponse> findOrdersByCriteria(OrderFilterDto filter, Pageable pageable);
     OrderResponse checkout(CheckoutRequest request);
+    void markCompleted(UUID orderId);
+    void markFailed(UUID orderId);
+    void createOrderForWinner(UUID auctionId, UUID bidderId);
 }

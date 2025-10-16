@@ -1,9 +1,9 @@
 package com.mazadak.orders.service.impl;
 
+import com.mazadak.orders.client.AuctionClient;
 import com.mazadak.orders.client.CartClient;
 import com.mazadak.orders.client.UserClient;
 import com.mazadak.orders.dto.client.CartResponseDTO;
-import com.mazadak.orders.dto.client.UserProfileResponse;
 import com.mazadak.orders.dto.request.CheckoutRequest;
 import com.mazadak.orders.dto.request.OrderFilterDto;
 import com.mazadak.orders.dto.response.OrderResponse;
@@ -33,6 +33,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final UserClient userClient;
     private final CartClient cartClient;
+    private final AuctionClient auctionClient;
 
     @Override
     public OrderResponse getOrderById(UUID id) {
@@ -70,5 +71,33 @@ public class OrderServiceImpl implements OrderService {
         // save record
         // start workflow
         return new OrderResponse(UUID.randomUUID(), request.userId(), OrderType.FIXED_PRICE, BigDecimal.ZERO, OrderStatus.PENDING, request.address(), PaymentStatus.PENDING, null, null, null, request.cartId());
+    }
+
+    @Override
+    public void markCompleted(UUID orderId) {
+        var order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId.toString()));
+
+        order.setStatus(OrderStatus.COMPLETED);
+    }
+
+    @Override
+    public void markFailed(UUID orderId) {
+        var order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId.toString()));
+
+        order.setStatus(OrderStatus.FAILED);
+    }// TODO: clean up
+
+    @Override
+    public void createOrderForWinner(UUID auctionId, UUID bidderId) {
+        // construct & persist order record
+        // product client
+        // payment client
+        // users client (fix)
+        // worker
+        // configure bindings for auction completed and invalid
+        // figure out email sending for checkout for winner
+        // starter
     }
 }
