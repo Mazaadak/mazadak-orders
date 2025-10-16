@@ -1,5 +1,6 @@
 package com.mazadak.orders.controller;
 
+import com.mazadak.orders.dto.request.CheckoutRequest;
 import com.mazadak.orders.dto.request.CreateTestOrderRequest;
 import com.mazadak.orders.dto.request.OrderFilterDto;
 import com.mazadak.orders.dto.request.TestOrderItemRequest;
@@ -13,22 +14,23 @@ import com.mazadak.orders.model.enumeration.PaymentStatus;
 import com.mazadak.orders.repository.OrderItemRepository;
 import com.mazadak.orders.repository.OrderRepository;
 import com.mazadak.orders.service.OrderService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.apache.coyote.Response;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/orders")
 @RequiredArgsConstructor
+@Validated
 public class OrderController {
     private final OrderService orderService;
     private final OrderRepository orderRepository;
@@ -67,7 +69,7 @@ public class OrderController {
         address.setStreet(request.getShippingAddress().getStreet());
         address.setCity(request.getShippingAddress().getCity());
         address.setState(request.getShippingAddress().getState());
-        address.setZipCode(request.getShippingAddress().getZipCode());
+        address.setPostalCode(request.getShippingAddress().getZipCode());
         address.setCountry(request.getShippingAddress().getCountry());
         order.setShippingAddress(address);
 
@@ -97,5 +99,11 @@ public class OrderController {
         order = orderRepository.save(order);
 
         return ResponseEntity.ok(order);
+    }
+
+    @PostMapping("/checkout")
+    public ResponseEntity<OrderResponse> checkout(@Valid @RequestBody CheckoutRequest request) {
+        var response = orderService.checkout(request);
+        return ResponseEntity.ok(response);
     }
 }

@@ -2,7 +2,6 @@ package com.mazadak.orders.model.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
 
 @Embeddable
 @Getter
@@ -13,6 +12,6 @@ public class Address {
     private String street;
     private String city;
     private String state;
-    private String zipCode;
+    private String postalCode;
     private String country;
 }
