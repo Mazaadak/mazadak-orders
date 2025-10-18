@@ -14,7 +14,9 @@ import com.mazadak.orders.model.enumeration.PaymentStatus;
 import com.mazadak.orders.repository.OrderItemRepository;
 import com.mazadak.orders.repository.OrderRepository;
 import com.mazadak.orders.service.OrderService;
+import io.temporal.api.common.v1.WorkflowExecution;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +27,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -102,8 +105,13 @@ public class OrderController {
     }
 
     @PostMapping("/checkout")
-    public ResponseEntity<OrderResponse> checkout(@Valid @RequestBody CheckoutRequest request) {
-        var response = orderService.checkout(request);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Map<String,String>> checkout(
+            @RequestHeader("Idempotency-Key") @NotNull UUID idempotencyKey,
+            @Valid @RequestBody CheckoutRequest request) {
+        WorkflowExecution exec = orderService.checkout(idempotencyKey, request);
+        return ResponseEntity.accepted().body(Map.of(
+                "workflowId", exec.getWorkflowId(),
+                "runId", exec.getRunId()
+        ));
     }
 }
