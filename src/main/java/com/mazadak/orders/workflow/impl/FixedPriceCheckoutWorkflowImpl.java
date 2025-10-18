@@ -6,6 +6,7 @@ import com.mazadak.orders.dto.request.CheckoutRequest;
 import com.mazadak.orders.dto.response.OrderResponse;
 import com.mazadak.orders.workflow.FixedPriceCheckoutWorkflow;
 import io.temporal.activity.ActivityOptions;
+import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Saga;
 import io.temporal.workflow.Workflow;
 import org.springframework.stereotype.Component;
@@ -26,8 +27,13 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
             this.activities = Workflow.newActivityStub(
                     FixedPriceCheckoutActivities.class,
                     ActivityOptions.newBuilder()
-                            .setStartToCloseTimeout(Duration.ofMinutes(10))
-                            .build()
+                            .setStartToCloseTimeout(Duration.ofSeconds(30))
+                            .setRetryOptions(RetryOptions.newBuilder()
+                                    .setMaximumAttempts(3)
+                                    .setInitialInterval(Duration.ofSeconds(2))
+                                    .setBackoffCoefficient(2.0)
+                                    .build()
+                            ).build()
             );
         }
 
@@ -37,7 +43,6 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
                 .build());
 
         OrderResponse order = null;
-        CartResponseDTO cart = null;
 
         try {
             // 1. Deactivate cart to prevent modifications
@@ -45,7 +50,7 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
             saga.addCompensation(() -> activities.activateCart(request.userId()));
 
             // 2. Get cart
-            cart = activities.getCart(request.userId());
+            CartResponseDTO cart = activities.getCart(request.userId());
 
             // 3. Create Order
             order = activities.createOrder(request, cart);
@@ -57,12 +62,13 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
             List<UUID> reservationIds = activities.reserveInventory(order.id(), cart.cartItems());
 
 
+            // 5. Process payment (TODO: Implement payment processing)
+
             // If we fail after this, we need to release the inventory reservations
             saga.addCompensation(
                     () -> activities.releaseInventoryReservations(orderId, reservationIds)
             );
 
-            // 5. Process payment (TODO: Implement payment processing)
 
 
             // 6. If payment successful, confirm reservation
