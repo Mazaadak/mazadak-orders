@@ -9,5 +9,6 @@ public record UserProfileResponse(String phone,
                                   List<AddressDto> addresses,
                                   Gender gender,
                                   String firstName,
-                                  String lastName) {
+                                  String lastName,
+                                  String email) {
 }

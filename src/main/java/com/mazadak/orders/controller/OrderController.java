@@ -14,6 +14,7 @@ import com.mazadak.orders.model.enumeration.PaymentStatus;
 import com.mazadak.orders.repository.OrderItemRepository;
 import com.mazadak.orders.repository.OrderRepository;
 import com.mazadak.orders.service.OrderService;
+import com.mazadak.orders.workflow.starter.AuctionCheckoutStarter;
 import io.temporal.api.common.v1.WorkflowExecution;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -38,6 +39,7 @@ public class OrderController {
     private final OrderService orderService;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final AuctionCheckoutStarter auctionCheckoutStarter;
 
     @GetMapping("{id}")
     public ResponseEntity<OrderResponse> getOrderById(@PathVariable UUID id) {
@@ -54,6 +56,7 @@ public class OrderController {
 
     @PostMapping("/test/create")
     public ResponseEntity<Order> createTestOrder(@RequestBody CreateTestOrderRequest request) {
+        // TODO: remove
         Order order = new Order();
         order.setBuyerId(request.getBuyerId());
         order.setType(request.getType());
@@ -113,5 +116,25 @@ public class OrderController {
                 "workflowId", exec.getWorkflowId(),
                 "runId", exec.getRunId()
         ));
+    }
+
+    @PostMapping("/checkout/{orderId}/address")
+    public ResponseEntity<Void> provideAddressTest(@PathVariable UUID orderId) {
+        auctionCheckoutStarter.sendAddressProvided(orderId, new Address(
+                "test",
+                "test",
+                "test",
+                "test",
+                "test")
+        );
+        return ResponseEntity.ok().build();
+        // TODO implement
+    }
+
+    @PostMapping("/checkout/{orderId}/payment")
+    public ResponseEntity<Void> authorizePayment(@PathVariable UUID orderId) {
+        auctionCheckoutStarter.sendPaymentAuthorized(orderId, "TEST");
+        return ResponseEntity.ok().build();
+        // TODO: remove
     }
 }

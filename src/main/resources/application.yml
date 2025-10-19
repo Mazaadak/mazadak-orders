@@ -18,6 +18,34 @@ spring:
   cloud:
     bus:
       enabled: false
+    function:
+      definition: auctionEndedEventConsumer;paymentAuthorizedEventConsumer
+    stream:
+      bindings:
+        auctionEndedEventConsumer-in-0:
+          destination: auction-ended
+          group: order-service
+        paymentAuthorizedEventConsumer-in-0:
+          destination: payment-authorized
+          group: order-service
+        auctionCheckoutStarted-out-0:
+          destination: auction-checkout-started
+          content-type: application/json
+        auctionCheckoutFailed-out-0:
+          destination: auction-checkout-failed
+          content-type: application/json
+        auctionCompleted-out-0:
+          destination: auction-completed
+          content-type: application/json
+        auctionInvalid-out-0:
+          destination: auction-invalid
+          content-type: application/json
+        checkoutSuccessful-out-0:
+          destination: checkout-sucessful
+          content-type: application/json
+      kafka:
+        binder:
+          brokers: localhost:9092
 
 logging:
   level:

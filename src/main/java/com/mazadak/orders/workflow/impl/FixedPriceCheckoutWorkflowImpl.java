@@ -1,6 +1,10 @@
 package com.mazadak.orders.workflow.impl;
 
-import com.mazadak.orders.workflow.activities.FixedPriceCheckoutActivities;
+import com.mazadak.orders.exception.CheckoutCancelledException;
+import com.mazadak.orders.exception.CheckoutTimeoutException;
+import com.mazadak.orders.model.enumeration.PaymentStatus;
+import com.mazadak.orders.workflow.activity.CheckoutActivities;
+import com.mazadak.orders.workflow.activity.FixedPriceCheckoutActivities;
 import com.mazadak.orders.dto.client.CartResponseDTO;
 import com.mazadak.orders.dto.request.CheckoutRequest;
 import com.mazadak.orders.dto.response.OrderResponse;
@@ -9,34 +13,48 @@ import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Saga;
 import io.temporal.workflow.Workflow;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
-@Component
 public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflow {
+    private static final Logger log = Workflow.getLogger(AuctionCheckoutWorkflowImpl.class);
+    private UUID currentOrderId;
+    private String currentPaymentIntentId;
 
-    private  FixedPriceCheckoutActivities activities ;
+    private boolean paymentAuthorized = false;
+    private boolean checkoutCancelled = false;
+
+    private final FixedPriceCheckoutActivities fixedPriceCheckoutActivities = Workflow.newActivityStub(
+            FixedPriceCheckoutActivities.class,
+            ActivityOptions.newBuilder()
+                    .setStartToCloseTimeout(Duration.ofSeconds(30))
+                    .setRetryOptions(RetryOptions.newBuilder()
+                            .setMaximumAttempts(3)
+                            .setInitialInterval(Duration.ofSeconds(2))
+                            .setBackoffCoefficient(2.0)
+                            .build()
+                    ).build()
+    );
+
+    private final CheckoutActivities checkoutActivities = Workflow.newActivityStub(
+            CheckoutActivities.class,
+            ActivityOptions.newBuilder()
+                    .setStartToCloseTimeout(Duration.ofSeconds(30))
+                    .setRetryOptions(RetryOptions.newBuilder()
+                            .setMaximumAttempts(3)
+                            .setInitialInterval(Duration.ofSeconds(2))
+                            .setBackoffCoefficient(2.0)
+                            .build()
+                    ).build()
+    );
 
     @Override
     public OrderResponse processCheckout(CheckoutRequest request) {
-
-        if (activities == null) {
-            this.activities = Workflow.newActivityStub(
-                    FixedPriceCheckoutActivities.class,
-                    ActivityOptions.newBuilder()
-                            .setStartToCloseTimeout(Duration.ofSeconds(30))
-                            .setRetryOptions(RetryOptions.newBuilder()
-                                    .setMaximumAttempts(3)
-                                    .setInitialInterval(Duration.ofSeconds(2))
-                                    .setBackoffCoefficient(2.0)
-                                    .build()
-                            ).build()
-            );
-        }
-
         Saga saga = new Saga(new Saga.Options.Builder()
                 .setParallelCompensation(false)
                 .setContinueWithError(false)
@@ -46,64 +64,110 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
 
         try {
             // 1. Deactivate cart to prevent modifications
-            activities.deactivateCart(request.userId());
-            saga.addCompensation(() -> activities.activateCart(request.userId()));
+            fixedPriceCheckoutActivities.deactivateCart(request.userId());
+            saga.addCompensation(() -> fixedPriceCheckoutActivities.activateCart(request.userId()));
 
             // 2. Get cart
-            CartResponseDTO cart = activities.getCart(request.userId());
+            CartResponseDTO cart = fixedPriceCheckoutActivities.getCart(request.userId());
 
             // 3. Create Order
-            order = activities.createOrder(request, cart);
-            UUID orderId = order.id();
+            order = fixedPriceCheckoutActivities.createOrder(request, cart);
+            this.currentOrderId = order.id();
             // If we fail after this, we need to mark the order as failed
-            saga.addCompensation(() -> activities.markOrderAsFailed(orderId));
+            saga.addCompensation(() -> checkoutActivities.markOrderAsFailed(currentOrderId));
 
             // 4. Reserve inventory
-            List<UUID> reservationIds = activities.reserveInventory(order.id(), cart.cartItems());
-
-
-            // 5. Process payment (TODO: Implement payment processing)
-
+            List<UUID> reservationIds = fixedPriceCheckoutActivities.reserveInventory(order.id(), cart.cartItems());
             // If we fail after this, we need to release the inventory reservations
             saga.addCompensation(
-                    () -> activities.releaseInventoryReservations(orderId, reservationIds)
+                    () -> fixedPriceCheckoutActivities.releaseInventoryReservations(currentOrderId, reservationIds)
             );
 
+            // 5. Wait for payment authorization
+            boolean isPaymentAuthorized = Workflow.await(
+                    Duration.ofMinutes(15), // TODO make dynamic
+                    () -> paymentAuthorized || checkoutCancelled
+            );
+
+            if (checkoutCancelled) {
+                throw new CheckoutCancelledException("Checkout cancelled during payment authorization");
+            }
+
+            if (!paymentAuthorized) {
+                throw new CheckoutTimeoutException("Payment not authorized within " + 15 + " minutes"); // TODO make dynamic
+            }
+
+            // 6. Associate a paayment intent with order
+            checkoutActivities.setOrderPaymentIntentId(this.currentOrderId, currentPaymentIntentId);
+            log.info("Authorized payment for order {}", this.currentOrderId);
+
+            checkoutActivities.setOrderPaymentStatus(this.currentOrderId, PaymentStatus.AUTHORIZED);
+
+            // 7. If payment authorized, confirm reservation
+            fixedPriceCheckoutActivities.confirmInventoryReservations(order.id(), reservationIds);
+
+            // 8. Capture payment
+            checkoutActivities.capturePayment(this.currentOrderId);
+            saga.addCompensation(() -> checkoutActivities.refundPayment(this.currentOrderId));
+
+            checkoutActivities.setOrderPaymentStatus(this.currentOrderId, PaymentStatus.CAPTURED);
+
+            // 9. Clear and activate cart
+            fixedPriceCheckoutActivities.clearCart(request.userId());
+            fixedPriceCheckoutActivities.activateCart(request.userId());
 
 
-            // 6. If payment successful, confirm reservation
-            activities.confirmInventoryReservations(order.id(), reservationIds);
+            // 10. Send notifications (TODO: Implement notifications)
+            checkoutActivities.sendCheckoutSucessfulNotification(currentOrderId, order.buyerId());
 
-
-            // 7. Clear and activate cart
-            activities.clearCart(request.userId());
-            activities.activateCart(request.userId());
-
-
-            // 8. Send notifications (TODO: Implement notifications)
-
-            // 9. Update order status to be completed
-            activities.markOrderAsCompleted(orderId);
+            // 11. Update order status to be completed
+            checkoutActivities.markOrderAsCompleted(currentOrderId);
 
             return order;
 
         } catch (Exception e) {
 
-            Workflow.getLogger(getClass()).error("Error during checkout process", e);
+            log.error("Error during checkout process", e);
 
             // Compensate for completed operations in reverse order
-            Workflow.newDetachedCancellationScope(saga::compensate).run();
+//            Workflow.newDetachedCancellationScope(saga::compensate).run();
 
             // If we have an order ID but couldn't mark it as failed in the compensation
             if (order != null && order.id() != null) {
                 try {
-                    activities.markOrderAsFailed(order.id());
+                    checkoutActivities.markOrderAsFailed(order.id());
+                    checkoutActivities.cancelPaymentIntent(order.id());
                 } catch (Exception ex) {
-                    Workflow.getLogger(getClass()).error("Failed to mark order as failed", ex);
+                    log.error("Failed to mark order as failed", ex);
                 }
             }
 
             throw Workflow.wrap(e);
         }
+    }
+
+    @Override
+    public void paymentAuthorized(UUID orderId, String paymentIntentId) {
+        log.info("Signal received: paymentAuthorized for order: {}, intentId: {}", orderId, paymentIntentId);
+
+        if (!orderId.equals(currentOrderId)) {
+            log.warn("Ignoring payment authorization for non-current order: {} (current: {})", orderId, currentOrderId);
+            return;
+        }
+
+        if (paymentAuthorized) {
+            log.warn("Payment already authorized for order {}, ignoring duplicate", orderId);
+            return;
+        }
+
+        if (checkoutCancelled) {
+            log.warn("Checkout is cancelled for order {}, ignoring payment authorization", orderId);
+            return;
+        }
+
+        this.currentPaymentIntentId = paymentIntentId;
+        this.paymentAuthorized = true;
+
+        log.info("Payment authorization accepted for order: {}", orderId);
     }
 }

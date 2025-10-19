@@ -1,11 +1,9 @@
-package com.mazadak.orders.workflow.activities;
+package com.mazadak.orders.workflow.activity;
 
 import com.mazadak.orders.dto.client.CartItemResponseDTO;
 import com.mazadak.orders.dto.client.CartResponseDTO;
 import com.mazadak.orders.dto.request.CheckoutRequest;
-import com.mazadak.orders.dto.response.InventoryReservationResponse;
 import com.mazadak.orders.dto.response.OrderResponse;
-import com.mazadak.orders.workflow.CheckoutActivities;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 
@@ -14,7 +12,7 @@ import java.util.UUID;
 
 
 @ActivityInterface
-public interface FixedPriceCheckoutActivities extends CheckoutActivities {
+public interface FixedPriceCheckoutActivities {
 
     // ==== Order ====
 
