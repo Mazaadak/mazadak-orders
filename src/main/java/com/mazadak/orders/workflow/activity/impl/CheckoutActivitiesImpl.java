@@ -3,32 +3,38 @@ package com.mazadak.orders.workflow.activity.impl;
 import com.mazadak.orders.client.PaymentClient;
 import com.mazadak.orders.client.UserClient;
 import com.mazadak.orders.dto.client.RefundRequest;
+import com.mazadak.orders.dto.event.CheckoutSucessfulEvent;
 import com.mazadak.orders.exception.PaymentCaptureFailedException;
 import com.mazadak.orders.model.entity.Address;
 import com.mazadak.orders.model.enumeration.PaymentStatus;
 import com.mazadak.orders.service.OrderService;
+import com.mazadak.orders.workflow.activity.CheckoutActivities;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.stereotype.Component;
 
 import java.util.Objects;
 import java.util.UUID;
 
 @Slf4j
 @RequiredArgsConstructor
+@Component
 public class CheckoutActivitiesImpl implements CheckoutActivities {
     private final OrderService orderService;
     private final UserClient userClient;
     private final PaymentClient paymentClient;
+    private final StreamBridge streamBridge;
 
     @Override
     public void cancelPaymentIntent(UUID orderId) {
         log.info("Cancelling intent for order {}", orderId);
-        var response = paymentClient.cancelPayment(orderId).getBody();
-        if (response == null) {
+        try {
+            var response = paymentClient.cancelPayment(orderId).getBody();
+            log.info("Cancelled intent {}", response.id());
+        } catch (Exception e) {
             log.info("No intent was associated with order {}, thus cancellation was ignored", orderId);
-            return;
         }
-        log.info("Cancelled intent {}", response.id());
     }
 
     @Override
@@ -83,5 +89,11 @@ public class CheckoutActivitiesImpl implements CheckoutActivities {
     public String fetchUserEmail(UUID userId) {
         return Objects.requireNonNull(userClient.getUser(userId, userId).getBody()) // TODO: attach header
                 .email();
+    }
+
+    @Override
+    public void sendCheckoutSucessfulNotification(UUID orderId, UUID userId) {
+        log.info("Checkout sucessful for user {}. Order {}", userId, orderId);
+        streamBridge.send("checkoutSuccessful-out-0", new CheckoutSucessfulEvent(orderId, userId));
     }
 }

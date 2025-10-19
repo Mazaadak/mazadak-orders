@@ -1,6 +1,5 @@
 package com.mazadak.orders.event.consumer;
 
-import com.mazadak.orders.client.AuctionClient;
 import com.mazadak.orders.mapper.AuctionCheckoutMapper;
 import com.mazadak.orders.dto.internal.AuctionCheckoutRequest;
 import com.mazadak.orders.workflow.starter.AuctionCheckoutStarter;
@@ -16,7 +15,6 @@ import java.util.function.Consumer;
 @Slf4j
 public class AuctionEndedEventConsumer implements Consumer<AuctionEndedEvent> {
     private final AuctionCheckoutStarter starter;
-    private final AuctionClient client;
 
     @Override
     public void accept(AuctionEndedEvent event) {

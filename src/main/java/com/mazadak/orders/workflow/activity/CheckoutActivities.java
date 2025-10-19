@@ -1,4 +1,4 @@
-package com.mazadak.orders.workflow.activity.impl;
+package com.mazadak.orders.workflow.activity;
 
 import com.mazadak.orders.model.entity.Address;
 import com.mazadak.orders.model.enumeration.PaymentStatus;
@@ -18,4 +18,5 @@ public interface CheckoutActivities {
     void markOrderAsFailed(UUID orderId);
     void setOrderPaymentStatus(UUID orderId, PaymentStatus status);
     String fetchUserEmail(UUID userId);
+    void sendCheckoutSucessfulNotification(UUID orderId, UUID userId);
 }

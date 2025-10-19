@@ -3,12 +3,15 @@ package com.mazadak.orders.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
-import com.mazadak.orders.client.PaymentClient;
-import com.mazadak.orders.client.UserClient;
+import com.mazadak.orders.client.*;
 import com.mazadak.orders.service.OrderService;
+import com.mazadak.orders.workflow.activity.FixedPriceCheckoutActivities;
 import com.mazadak.orders.workflow.activity.impl.AuctionCheckoutActivitiesImpl;
+import com.mazadak.orders.workflow.activity.CheckoutActivities;
+import com.mazadak.orders.workflow.activity.impl.FixedPriceCheckoutActivitiesImpl;
 import com.mazadak.orders.workflow.impl.AuctionCheckoutWorkflowImpl;
 import com.mazadak.orders.workflow.activity.impl.CheckoutActivitiesImpl;
+import com.mazadak.orders.workflow.impl.FixedPriceCheckoutWorkflowImpl;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
 import io.temporal.common.converter.DefaultDataConverter;
@@ -16,6 +19,7 @@ import io.temporal.common.converter.JacksonJsonPayloadConverter;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -52,17 +56,6 @@ public class TemporalWorkerConfig {
     }
 
     @Bean
-    public AuctionCheckoutActivitiesImpl auctionCheckoutActivitiesImpl(StreamBridge streamBridge,
-                                                                       OrderService orderService) {
-        return new AuctionCheckoutActivitiesImpl(streamBridge, orderService);
-    }
-
-    @Bean
-    public CheckoutActivitiesImpl checkoutActivitiesImpl(OrderService orderService, UserClient userClient, PaymentClient paymentClient) {
-        return new CheckoutActivitiesImpl(orderService, userClient, paymentClient);
-    }
-
-    @Bean
     public Worker auctionCheckoutWorker(
             WorkerFactory workerFactory,
             AuctionCheckoutActivitiesImpl auctionCheckoutActivities,
@@ -79,7 +72,30 @@ public class TemporalWorkerConfig {
                 checkoutActivities
         );
 
-        workerFactory.start();
         return worker;
+    }
+
+    @Bean
+    public Worker fixedPriceCheckoutWorker(
+            WorkerFactory workerFactory,
+            FixedPriceCheckoutActivities fixedPriceCheckoutActivities,
+            CheckoutActivities checkoutActivities) {
+        Worker worker = workerFactory.newWorker("FIXED_PRICE_CHECKOUT_TASK_QUEUE");
+
+        worker.registerWorkflowImplementationTypes(
+                FixedPriceCheckoutWorkflowImpl.class
+        );
+
+        worker.registerActivitiesImplementations(
+                fixedPriceCheckoutActivities,
+                checkoutActivities
+        );
+
+        return worker;
+    }
+
+    @Bean
+    public ApplicationRunner startWorkerFactory(WorkerFactory workerFactory) {
+        return args -> workerFactory.start();
     }
 }

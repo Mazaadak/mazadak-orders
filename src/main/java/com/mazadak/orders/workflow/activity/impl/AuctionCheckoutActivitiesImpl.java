@@ -7,14 +7,17 @@ import com.mazadak.orders.service.OrderService;
 import com.mazadak.orders.dto.event.AuctionCheckoutFailedEvent;
 import com.mazadak.orders.dto.internal.AuctionCheckoutRequest;
 import com.mazadak.orders.dto.event.AuctionCheckoutStartedEvent;
+import com.mazadak.orders.workflow.activity.AuctionCheckoutActivities;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
 @Slf4j
 @RequiredArgsConstructor
+@Component
 public class AuctionCheckoutActivitiesImpl implements AuctionCheckoutActivities {
     private final StreamBridge streamBridge;
     private final OrderService orderService;

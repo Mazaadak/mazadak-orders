@@ -126,7 +126,6 @@
             <groupId>io.temporal</groupId>
             <artifactId>temporal-spring-boot-starter</artifactId>
             <version>1.31.0</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.kafka</groupId>
@@ -146,16 +145,36 @@
         <dependency>
             <groupId>io.temporal</groupId>
             <artifactId>temporal-sdk</artifactId>
-            <version>1.24.1</version>
+            <version>1.31.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.openfeign</groupId>
+            <artifactId>feign-httpclient</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.openfeign</groupId>
+            <artifactId>feign-okhttp</artifactId> <!-- Required to use PATCH -->
         </dependency>
 
+        <dependency>
+            <groupId>io.github.openfeign</groupId>
+            <artifactId>feign-okhttp</artifactId>
+            <version>13.6</version> <!-- match your feign-core version (13.6 from your stacktrace) -->
+        </dependency>
+
+        <!-- and OkHttp -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.11.0</version>
+        </dependency>
         <dependency>
             <!--
               Testing
             -->
             <groupId>io.temporal</groupId>
             <artifactId>temporal-testing</artifactId>
-            <version>1.24.1</version>
+            <version>1.31.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

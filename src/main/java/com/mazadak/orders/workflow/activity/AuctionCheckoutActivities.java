@@ -1,4 +1,4 @@
-package com.mazadak.orders.workflow.activity.impl;
+package com.mazadak.orders.workflow.activity;
 
 import com.mazadak.orders.dto.client.AuctionResponse;
 import com.mazadak.orders.dto.internal.AuctionCheckoutRequest;

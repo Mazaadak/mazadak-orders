@@ -1,14 +1,20 @@
 package com.mazadak.orders.service.impl;
 
-import com.mazadak.orders.client.AuctionClient;
+import com.mazadak.orders.client.ProductClient;
 import com.mazadak.orders.dto.client.AuctionResponse;
+import com.mazadak.orders.client.CartClient;
+import com.mazadak.orders.client.UserClient;
+import com.mazadak.orders.dto.client.CartItemResponseDTO;
+import com.mazadak.orders.dto.client.CartResponseDTO;
 import com.mazadak.orders.dto.request.CheckoutRequest;
 import com.mazadak.orders.dto.request.OrderFilterDto;
 import com.mazadak.orders.dto.response.OrderResponse;
+import com.mazadak.orders.dto.response.ProductResponseDTO;
 import com.mazadak.orders.exception.ResourceNotFoundException;
 import com.mazadak.orders.mapper.OrderMapper;
 import com.mazadak.orders.model.entity.Address;
 import com.mazadak.orders.model.entity.Order;
+import com.mazadak.orders.model.entity.OrderItem;
 import com.mazadak.orders.model.enumeration.OrderStatus;
 import com.mazadak.orders.model.enumeration.OrderType;
 import com.mazadak.orders.model.enumeration.PaymentStatus;
@@ -16,7 +22,12 @@ import com.mazadak.orders.repository.OrderRepository;
 import com.mazadak.orders.repository.specification.OrderSpecifications;
 import com.mazadak.orders.service.OrderService;
 import com.mazadak.orders.dto.internal.AuctionCheckoutRequest;
+import com.mazadak.orders.workflow.FixedPriceCheckoutWorkflow;
+import io.temporal.api.common.v1.WorkflowExecution;
+import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowOptions;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -24,17 +35,22 @@ import org.springframework.data.repository.core.support.RepositoryMethodInvocati
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
-//    private final UserClient userClient;
-//    private final CartClient cartClient;
-    private final AuctionClient auctionClient;
-//    private final ProductClient productClient;
     private final RepositoryMethodInvocationListener repositoryMethodInvocationListener;
+    private final WorkflowClient workflowClient;
+    private final ProductClient productClient;
+
 
     @Override
     public OrderResponse getOrderById(UUID id) {
@@ -52,26 +68,19 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderResponse checkout(CheckoutRequest request) {
-        // TODO: user existence validation
-//        UserProfileResponse user = userClient.getUserProfile(request.userId()).getBody();
-//        if (user == null) {
-//            throw new ResourceNotFoundException("User", "id", request.userId().toString());
-//        }
-
-//        CartResponseDTO cart = cartClient.getCart(request.userId()).getBody();
-//        if (cart == null || !cart.cartId().equals(request.cartId())) {
-//            throw new CartOwnershipException("Cart with id %s doesn't belong to user with id %s", request.cartId(), request.userId());
-//        }
-
-
-        // construct order object
-        // buyerId, type, totalAmount, status, address, orderItems, paymentIntentId, auctionId, cartId
-        // construct order items
-        // productId, productName, productImageUrl, unitPrice, quantity, subtotal
-        // save record
-        // start workflow
-        return new OrderResponse(UUID.randomUUID(), request.userId(), OrderType.FIXED_PRICE, BigDecimal.ZERO, OrderStatus.PENDING, request.address(), PaymentStatus.PENDING, null, null, null, request.cartId());
+    public WorkflowExecution checkout(UUID idempotencyKey, CheckoutRequest request) {
+        log.info("Checkout request: {}", request);
+        FixedPriceCheckoutWorkflow workflow = workflowClient.newWorkflowStub(
+                FixedPriceCheckoutWorkflow.class,
+                WorkflowOptions.newBuilder()
+                        .setTaskQueue("ORDER_TASK_QUEUE")
+                        .setWorkflowId("fixed-price-checkout-" + idempotencyKey)
+                        .build()
+        );
+        // TODO: Need to handle running workflow exception
+        WorkflowExecution exec = WorkflowClient.start(workflow::processCheckout, request);
+        log.info("Workflow started: workflowId={}, runId={}", exec.getWorkflowId(), exec.getRunId());
+        return exec;
     }
 
     @Override
@@ -136,5 +145,65 @@ public class OrderServiceImpl implements OrderService {
 
         order.setPaymentStatus(status);
         orderRepository.save(order);
+    }
+
+    @Override
+    public OrderResponse createFixedPriceOrder(CheckoutRequest request, CartResponseDTO cart) {
+
+        Order order = new Order();
+        order.setBuyerId(request.userId());
+        order.setType(OrderType.FIXED_PRICE);
+        order.setStatus(OrderStatus.PENDING);
+        order.setPaymentStatus(PaymentStatus.PENDING);
+        order.setShippingAddress(request.address());
+        order.setCartId(cart.cartId());
+
+        log.info("Getting products details for order {}", order.getId());
+        List<UUID> productIds = cart.cartItems().stream()
+                .map(CartItemResponseDTO::productId)
+                .toList();
+
+        List<ProductResponseDTO> products = productClient.getProductsByIds(productIds).getBody();
+
+        // Create a map of product IDs to product details for fast lookup
+        Map<UUID, ProductResponseDTO> productMap = products.stream()
+                .collect(Collectors.toMap(ProductResponseDTO::productId, Function.identity()));
+
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        List<OrderItem> orderItems = new ArrayList<>();
+
+        for (CartItemResponseDTO cartItem : cart.cartItems()) {
+            log.info("Mapping cart item {} to order item", cartItem.productId());
+            ProductResponseDTO product = productMap.get(cartItem.productId());
+            if (product == null) {
+                log.error("Product not found: {}", cartItem.productId());
+                throw new RuntimeException("Product not found: " + cartItem.productId());
+            }
+
+            OrderItem orderItem = new OrderItem();
+            orderItem.setProductId(product.productId());
+            orderItem.setUnitPrice(product.price());
+            orderItem.setSellerId(product.sellerId());
+            orderItem.setQuantity(cartItem.quantity());
+            orderItem.setOrder(order);
+
+            BigDecimal itemTotal = product.price().multiply(new BigDecimal(cartItem.quantity()));
+            orderItem.setSubtotal(itemTotal);
+            totalAmount = totalAmount.add(itemTotal);
+
+            orderItems.add(orderItem);
+            log.info("Added order item {} to order {}", orderItem.getId(), order.getId());
+        }
+
+        log.info("Setting order total amount to {}", totalAmount);
+        order.setTotalAmount(totalAmount);
+        order.setOrderItems(orderItems);
+
+        log.info("Saving order {}", order);
+        Order createdOrder = orderRepository.save(order);
+
+        log.info("Order saved successfully");
+
+        return OrderMapper.toResponse(createdOrder);
     }
 }

@@ -6,8 +6,8 @@ import com.mazadak.orders.model.entity.Address;
 import com.mazadak.orders.model.enumeration.PaymentStatus;
 import com.mazadak.orders.dto.internal.AuctionCheckoutRequest;
 import com.mazadak.orders.workflow.AuctionCheckoutWorkflow;
-import com.mazadak.orders.workflow.activity.impl.AuctionCheckoutActivities;
-import com.mazadak.orders.workflow.activity.impl.CheckoutActivities;
+import com.mazadak.orders.workflow.activity.AuctionCheckoutActivities;
+import com.mazadak.orders.workflow.activity.CheckoutActivities;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Saga;
@@ -142,7 +142,10 @@ public class AuctionCheckoutWorkflowImpl implements AuctionCheckoutWorkflow {
             // STEP 9: emit auction completed event
             auctionActivities.emitAuctionCompletedEvent(request.auction().id(), currentOrderId);
 
-            // STEP 10: mark order as completed
+            // STEP 10: send checkout successful notification
+            checkoutActivities.sendCheckoutSucessfulNotification(currentOrderId, bidder.id());
+
+            // STEP 11: mark order as completed
             checkoutActivities.markOrderAsCompleted(currentOrderId);
 
             log.info("Successful checkout completed for bidder {}", bidder.id());
