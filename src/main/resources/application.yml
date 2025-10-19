@@ -54,25 +54,3 @@ logging:
 
 springdoc:
   show-spring-cloud-functions: false
-
-app:
-  checkout:
-    workflows:
-      auction:
-        timeouts:
-          address-submission: 24h
-          payment-authorization: 15m
-
-    activities:
-      auction:
-        start-to-close-timeout: 30s
-        retry-options:
-          maximum-attempts: 3
-          initial-interval: 2s
-          backoff-coefficient: 2.0
-      shared:
-        start-to-close-timeout: 45s
-        retry-options:
-          maximum-attempts: 3
-          initial-interval: 2s
-          backoff-coefficient: 2.0
