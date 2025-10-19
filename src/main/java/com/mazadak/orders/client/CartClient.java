@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.util.UUID;
 
-@FeignClient(name = "cart-service")
+//@FeignClient(name = "cart-service")
 public interface CartClient {
     @GetMapping("/carts")
     ResponseEntity<CartResponseDTO> getCart(@RequestHeader("user-id") @NotNull(message = "User ID is required") UUID userId);

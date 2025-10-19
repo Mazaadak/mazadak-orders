@@ -14,6 +14,7 @@ import com.mazadak.orders.model.enumeration.PaymentStatus;
 import com.mazadak.orders.repository.OrderItemRepository;
 import com.mazadak.orders.repository.OrderRepository;
 import com.mazadak.orders.service.OrderService;
+import com.mazadak.orders.workflow.starter.AuctionCheckoutStarter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -35,6 +36,7 @@ public class OrderController {
     private final OrderService orderService;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final AuctionCheckoutStarter auctionCheckoutStarter;
 
     @GetMapping("{id}")
     public ResponseEntity<OrderResponse> getOrderById(@PathVariable UUID id) {
@@ -105,5 +107,23 @@ public class OrderController {
     public ResponseEntity<OrderResponse> checkout(@Valid @RequestBody CheckoutRequest request) {
         var response = orderService.checkout(request);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/checkout/{orderId}/address")
+    public ResponseEntity<Void> provideAddressTest(@PathVariable UUID orderId) {
+        auctionCheckoutStarter.sendAddressProvided(orderId, new Address(
+                "test",
+                "test",
+                "test",
+                "test",
+                "test")
+        );
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/checkout/{orderId}/payment")
+    public ResponseEntity<Void> authorizePayment(@PathVariable UUID orderId) {
+        auctionCheckoutStarter.sendPaymentAuthorized(orderId, "TEST");
+        return ResponseEntity.ok().build();
     }
 }
