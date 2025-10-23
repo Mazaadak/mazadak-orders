@@ -73,7 +73,7 @@ public class OrderServiceImpl implements OrderService {
         FixedPriceCheckoutWorkflow workflow = workflowClient.newWorkflowStub(
                 FixedPriceCheckoutWorkflow.class,
                 WorkflowOptions.newBuilder()
-                        .setTaskQueue("ORDER_TASK_QUEUE")
+                        .setTaskQueue("FIXED_PRICE_CHECKOUT_TASK_QUEUE")
                         .setWorkflowId("fixed-price-checkout-" + idempotencyKey)
                         .build()
         );
@@ -182,6 +182,7 @@ public class OrderServiceImpl implements OrderService {
 
             OrderItem orderItem = new OrderItem();
             orderItem.setProductId(product.productId());
+            orderItem.setProductName(product.title());
             orderItem.setUnitPrice(product.price());
             orderItem.setSellerId(product.sellerId());
             orderItem.setQuantity(cartItem.quantity());

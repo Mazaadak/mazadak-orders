@@ -130,7 +130,7 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
             log.error("Error during checkout process", e);
 
             // Compensate for completed operations in reverse order
-//            Workflow.newDetachedCancellationScope(saga::compensate).run();
+            Workflow.newDetachedCancellationScope(saga::compensate).run();
 
             // If we have an order ID but couldn't mark it as failed in the compensation
             if (order != null && order.id() != null) {
