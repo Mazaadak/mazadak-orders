@@ -3,7 +3,7 @@ package com.mazadak.orders.workflow.activity.impl;
 import com.mazadak.orders.client.PaymentClient;
 import com.mazadak.orders.client.UserClient;
 import com.mazadak.orders.dto.client.RefundRequest;
-import com.mazadak.orders.dto.event.CheckoutSucessfulEvent;
+import com.mazadak.orders.dto.event.CheckoutSuccessfulEvent;
 import com.mazadak.orders.exception.PaymentCaptureFailedException;
 import com.mazadak.orders.model.entity.Address;
 import com.mazadak.orders.model.enumeration.PaymentStatus;
@@ -94,6 +94,6 @@ public class CheckoutActivitiesImpl implements CheckoutActivities {
     @Override
     public void sendCheckoutSucessfulNotification(UUID orderId, UUID userId) {
         log.info("Checkout sucessful for user {}. Order {}", userId, orderId);
-        streamBridge.send("checkoutSuccessful-out-0", new CheckoutSucessfulEvent(orderId, userId));
+        streamBridge.send("checkoutSuccessful-out-0", new CheckoutSuccessfulEvent(orderId, userId));
     }
 }

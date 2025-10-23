@@ -2,7 +2,7 @@ spring:
   application:
     name: orders
   config:
-    import: "configserver:http://localhost:18071/"
+    import: "optional:configserver:http://localhost:18071/"
   datasource:
     url: jdbc:h2:mem:orderdb;
     driver-class-name: org.h2.Driver
@@ -41,7 +41,7 @@ spring:
           destination: auction-invalid
           content-type: application/json
         checkoutSuccessful-out-0:
-          destination: checkout-sucessful
+          destination: checkout-successful
           content-type: application/json
       kafka:
         binder:
