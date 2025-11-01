@@ -1,5 +1,6 @@
 package com.mazadak.orders.event.consumer;
 
+import com.mazadak.orders.service.OrderService;
 import com.mazadak.orders.workflow.starter.AuctionCheckoutStarter;
 import com.mazadak.orders.dto.event.PaymentAuthorizedEvent;
 import lombok.RequiredArgsConstructor;
@@ -13,13 +14,13 @@ import java.util.function.Consumer;
 @Slf4j
 @RequiredArgsConstructor
 public class PaymentAuthorizedEventConsumer implements Consumer<PaymentAuthorizedEvent> {
-    private final AuctionCheckoutStarter starter;
+    private final OrderService orderService;
 
     @Override
     public void accept(PaymentAuthorizedEvent event) {
         log.info("Received PaymentAuthorizedEvent for order {}, intent {}",
                 event.orderId(), event.paymentIntentId());
 
-        starter.sendPaymentAuthorized(UUID.fromString(event.orderId()), event.paymentIntentId());
+        orderService.authorizePayment(UUID.fromString(event.orderId()), event.paymentIntentId());
     }
 }

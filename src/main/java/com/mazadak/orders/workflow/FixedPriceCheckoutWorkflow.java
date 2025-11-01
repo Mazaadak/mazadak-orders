@@ -10,8 +10,11 @@ import java.util.UUID;
 @WorkflowInterface
 public interface FixedPriceCheckoutWorkflow {
     @WorkflowMethod
-    OrderResponse processCheckout(CheckoutRequest request);
+    OrderResponse processCheckout(CheckoutRequest request, UUID idempotencyKey);
 
     @SignalMethod
     void paymentAuthorized(UUID orderId, String paymentIntentId);
+
+    @SignalMethod
+    void cancelCheckout(UUID orderId, String reason);
 }

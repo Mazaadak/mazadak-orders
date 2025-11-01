@@ -51,6 +51,16 @@ public class AuctionCheckoutStarter {
         workflow.submitShippingAddress(orderId, address);
     }
 
+    public void sendCheckoutCancelled(UUID orderId, String reason) {
+        String workflowId = "auction-checkout-" + getAuctionIdForOrder(orderId);
+        AuctionCheckoutWorkflow workflow = client.newWorkflowStub(
+                AuctionCheckoutWorkflow.class,
+                workflowId
+        );
+
+        workflow.cancelCheckout(orderId, reason);
+    }
+
     private UUID getAuctionIdForOrder(UUID orderId) {
         return orderService.getOrderById(orderId).auctionId();
     }

@@ -243,7 +243,7 @@ public class AuctionCheckoutWorkflowImpl implements AuctionCheckoutWorkflow {
         this.checkoutCancelled = true;
         this.cancellationReason = reason;
 
-        log.info("Checkout cancellation accepted for order: {}", orderId);
+        log.info("Checkout cancellation accepted for order: {}, reason: {}", orderId, cancellationReason);
     }
 
     private void resetWorkflowState() {

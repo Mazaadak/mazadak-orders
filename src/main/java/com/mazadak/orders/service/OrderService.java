@@ -26,5 +26,12 @@ public interface OrderService {
     void setAddress(UUID orderId, Address address);
     void setPaymentIntentId(UUID orderId, String paymentIntentId);
     void setPaymentStatus(UUID orderId, PaymentStatus status);
-    OrderResponse createFixedPriceOrder(CheckoutRequest request, CartResponseDTO cart);
+    OrderResponse createFixedPriceOrder(CheckoutRequest request, CartResponseDTO cart, UUID idempotencyKey);
+
+    void assertOrderBelongsToBuyer(UUID orderId, UUID userId);
+
+    void cancelCheckout(UUID orderId);
+    String getWorkflowIdForOrder(Order order);
+    String getWorkflowIdByOrderId(UUID orderId);
+    void authorizePayment(UUID orderId, String paymentIntentId);
 }

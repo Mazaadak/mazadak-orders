@@ -25,6 +25,7 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
     private static final Logger log = Workflow.getLogger(AuctionCheckoutWorkflowImpl.class);
     private UUID currentOrderId;
     private String currentPaymentIntentId;
+    private String cancellationReason;
 
     private boolean paymentAuthorized = false;
     private boolean checkoutCancelled = false;
@@ -54,7 +55,7 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
     );
 
     @Override
-    public OrderResponse processCheckout(CheckoutRequest request) {
+    public OrderResponse processCheckout(CheckoutRequest request, UUID idempotencyKey) {
         Saga saga = new Saga(new Saga.Options.Builder()
                 .setParallelCompensation(false)
                 .setContinueWithError(false)
@@ -71,7 +72,7 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
             CartResponseDTO cart = fixedPriceCheckoutActivities.getCart(request.userId());
 
             // 3. Create Order
-            order = fixedPriceCheckoutActivities.createOrder(request, cart);
+            order = fixedPriceCheckoutActivities.createOrder(request, cart, idempotencyKey);
             this.currentOrderId = order.id();
             // If we fail after this, we need to mark the order as failed
             saga.addCompensation(() -> checkoutActivities.markOrderAsFailed(currentOrderId));
@@ -169,5 +170,25 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
         this.paymentAuthorized = true;
 
         log.info("Payment authorization accepted for order: {}", orderId);
+    }
+
+    @Override
+    public void cancelCheckout(UUID orderId, String reason) {
+        log.info("Signal received: cancelCheckout for order: {}, reason: {}", orderId, reason);
+
+        if (!orderId.equals(currentOrderId)) {
+            log.warn("Ignoring cancellation for non-current order: {} (current: {})", orderId, currentOrderId);
+            return;
+        }
+
+        if (checkoutCancelled) {
+            log.warn("Checkout already cancelled for order {}", orderId);
+            return;
+        }
+
+        this.checkoutCancelled = true;
+        this.cancellationReason = reason;
+
+        log.info("Checkout cancellation accepted for order: {}, reason: {}", orderId, cancellationReason);
     }
 }

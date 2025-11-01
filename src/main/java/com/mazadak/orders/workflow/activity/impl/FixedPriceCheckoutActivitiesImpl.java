@@ -30,9 +30,9 @@ public class FixedPriceCheckoutActivitiesImpl implements FixedPriceCheckoutActiv
     private final OrderService orderService;
 
     @Override
-    public OrderResponse createOrder(CheckoutRequest request, CartResponseDTO cart) {
+    public OrderResponse createOrder(CheckoutRequest request, CartResponseDTO cart, UUID idempotencyKey) {
         log.info("Creating order for user {} and cart {}", request.userId(), cart.cartId());
-        return orderService.createFixedPriceOrder(request, cart);
+        return orderService.createFixedPriceOrder(request, cart, idempotencyKey);
     }
 
     @Override

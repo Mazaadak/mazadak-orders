@@ -17,7 +17,7 @@ public interface FixedPriceCheckoutActivities {
     // ==== Order ====
 
     @ActivityMethod
-    OrderResponse createOrder(CheckoutRequest request, CartResponseDTO cart);
+    OrderResponse createOrder(CheckoutRequest request, CartResponseDTO cart, UUID idempotencyKey);
 
     // ==== Cart Activities ====
     @ActivityMethod

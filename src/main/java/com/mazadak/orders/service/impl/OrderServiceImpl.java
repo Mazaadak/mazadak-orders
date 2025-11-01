@@ -23,16 +23,22 @@ import com.mazadak.orders.repository.specification.OrderSpecifications;
 import com.mazadak.orders.service.OrderService;
 import com.mazadak.orders.dto.internal.AuctionCheckoutRequest;
 import com.mazadak.orders.workflow.FixedPriceCheckoutWorkflow;
+import com.mazadak.orders.workflow.starter.AuctionCheckoutStarter;
+import com.mazadak.orders.workflow.starter.FixedPriceCheckoutStarter;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
+import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.NotAuthorizedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.repository.core.support.RepositoryMethodInvocationListener;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -50,6 +56,8 @@ public class OrderServiceImpl implements OrderService {
     private final RepositoryMethodInvocationListener repositoryMethodInvocationListener;
     private final WorkflowClient workflowClient;
     private final ProductClient productClient;
+    private final FixedPriceCheckoutStarter fixedPriceCheckoutStarter;
+    private final AuctionCheckoutStarter auctionCheckoutStarter;
 
 
     @Override
@@ -70,17 +78,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public WorkflowExecution checkout(UUID idempotencyKey, CheckoutRequest request) {
         log.info("Checkout request: {}", request);
-        FixedPriceCheckoutWorkflow workflow = workflowClient.newWorkflowStub(
-                FixedPriceCheckoutWorkflow.class,
-                WorkflowOptions.newBuilder()
-                        .setTaskQueue("FIXED_PRICE_CHECKOUT_TASK_QUEUE")
-                        .setWorkflowId("fixed-price-checkout-" + idempotencyKey)
-                        .build()
-        );
-        // TODO: Need to handle running workflow exception
-        WorkflowExecution exec = WorkflowClient.start(workflow::processCheckout, request);
-        log.info("Workflow started: workflowId={}, runId={}", exec.getWorkflowId(), exec.getRunId());
-        return exec;
+        return fixedPriceCheckoutStarter.startFixedPriceCheckout(idempotencyKey, request);
     }
 
     @Override
@@ -148,7 +146,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderResponse createFixedPriceOrder(CheckoutRequest request, CartResponseDTO cart) {
+    public OrderResponse createFixedPriceOrder(CheckoutRequest request, CartResponseDTO cart, UUID idempotencyKey) {
 
         Order order = new Order();
         order.setBuyerId(request.userId());
@@ -157,6 +155,7 @@ public class OrderServiceImpl implements OrderService {
         order.setPaymentStatus(PaymentStatus.PENDING);
         order.setShippingAddress(request.address());
         order.setCartId(cart.cartId());
+        order.setIdempotencyKey(idempotencyKey);
 
         log.info("Getting products details for order {}", order.getId());
         List<UUID> productIds = cart.cartItems().stream()
@@ -206,5 +205,79 @@ public class OrderServiceImpl implements OrderService {
         log.info("Order saved successfully");
 
         return OrderMapper.toResponse(createdOrder);
+    }
+
+    @Override
+    public void assertOrderBelongsToBuyer(UUID orderId, UUID userId) {
+        var order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "Id", orderId.toString()));
+
+        if (!userId.equals(order.getBuyerId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    String.format(
+                            "User %s not authorized to work with order %s",
+                            userId,
+                            order
+                    )
+            );
+        }
+    }
+
+    @Override
+    public String getWorkflowIdByOrderId(UUID orderId) {
+        var order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "Id", orderId.toString()));
+
+        return getWorkflowIdForOrder(order);
+    }
+
+    @Override
+    public void authorizePayment(UUID orderId, String paymentIntentId) {
+        var order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "Id", orderId.toString()));
+
+        var id = getWorkflowIdForOrder(order);
+
+        if (order.getType() == OrderType.FIXED_PRICE) {
+            fixedPriceCheckoutStarter.sendPaymentAuthorized(
+                    order.getIdempotencyKey(),
+                    orderId,
+                    paymentIntentId
+            );
+        } else {
+            auctionCheckoutStarter.sendPaymentAuthorized(
+                    orderId,
+                    paymentIntentId
+            );
+        }
+    }
+
+    @Override
+    public String getWorkflowIdForOrder(Order order) {
+        return order.getType() == OrderType.FIXED_PRICE ?
+                "fixed-price-checkout-" + order.getIdempotencyKey() :
+                "auction-checkout-" + order.getAuctionId();
+    }
+
+    @Override
+    public void cancelCheckout(UUID orderId) {
+        var order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "Id", orderId.toString()));
+
+        var id = getWorkflowIdForOrder(order);
+
+        if (order.getType() == OrderType.FIXED_PRICE) {
+            fixedPriceCheckoutStarter.sendCheckoutCancelled(
+                    order.getIdempotencyKey(),
+                    orderId,
+                    "User cancelled checkout"
+            );
+        } else {
+            auctionCheckoutStarter.sendCheckoutCancelled(
+                    order.getAuctionId(),
+                    "User cancelled checkout"
+            );
+        }
     }
 }

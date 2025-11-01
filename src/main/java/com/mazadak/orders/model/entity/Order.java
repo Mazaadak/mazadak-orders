@@ -50,4 +50,6 @@ public class Order extends BaseEntity {
     private UUID auctionId;
 
     private UUID cartId;
+
+    private UUID idempotencyKey;
 }
