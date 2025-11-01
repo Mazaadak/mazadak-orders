@@ -139,7 +139,7 @@ public class OrderController {
                                                    @RequestBody Address address
     ) {
         orderService.assertOrderBelongsToBuyer(orderId, userId);
-        auctionCheckoutStarter.sendAddressProvided(orderId, address);
+        auctionCheckoutStarter.sendAddressProvided(orderId, orderService.getOrderById(orderId).auctionId(), address);
         return ResponseEntity.ok().build();
     }
 //

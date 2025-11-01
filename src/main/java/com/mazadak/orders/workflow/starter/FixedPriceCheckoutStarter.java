@@ -19,7 +19,6 @@ import java.util.UUID;
 @Slf4j
 public class FixedPriceCheckoutStarter {
     private WorkflowClient client;
-    private final OrderService orderService;
 
     public WorkflowExecution startFixedPriceCheckout(UUID idempotencyKey, CheckoutRequest request) {
         String workflowId = "fixed-price-checkout-" + idempotencyKey;

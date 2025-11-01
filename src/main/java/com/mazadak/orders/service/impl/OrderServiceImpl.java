@@ -247,7 +247,7 @@ public class OrderServiceImpl implements OrderService {
             );
         } else {
             auctionCheckoutStarter.sendPaymentAuthorized(
-                    orderId,
+                    order.getAuctionId(),
                     paymentIntentId
             );
         }
@@ -275,6 +275,7 @@ public class OrderServiceImpl implements OrderService {
             );
         } else {
             auctionCheckoutStarter.sendCheckoutCancelled(
+                    orderId,
                     order.getAuctionId(),
                     "User cancelled checkout"
             );

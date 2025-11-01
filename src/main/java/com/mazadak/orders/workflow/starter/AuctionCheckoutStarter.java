@@ -15,7 +15,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuctionCheckoutStarter {
     private final WorkflowClient client;
-    private final OrderService orderService;
 
     public void startAuctionCheckout(AuctionCheckoutRequest request) {
         String workflowId = "auction-checkout-" + request.auction().id();
@@ -31,18 +30,18 @@ public class AuctionCheckoutStarter {
         WorkflowClient.start(workflow::processAuctionCheckout, request);
     }
 
-    public void sendPaymentAuthorized(UUID orderId, String paymentIntentId) {
-        String workflowId = "auction-checkout-" + getAuctionIdForOrder(orderId);
+    public void sendPaymentAuthorized(UUID auctionId, String paymentIntentId) {
+        String workflowId = "auction-checkout-" + auctionId;
         AuctionCheckoutWorkflow workflow = client.newWorkflowStub(
                 AuctionCheckoutWorkflow.class,
                 workflowId
         );
 
-        workflow.paymentAuthorized(orderId, paymentIntentId);
+        workflow.paymentAuthorized(auctionId, paymentIntentId);
     }
 
-    public void sendAddressProvided(UUID orderId, Address address) {
-        String workflowId = "auction-checkout-" + getAuctionIdForOrder(orderId);
+    public void sendAddressProvided(UUID orderId, UUID auctionId, Address address) {
+        String workflowId = "auction-checkout-" + auctionId;
         AuctionCheckoutWorkflow workflow = client.newWorkflowStub(
                 AuctionCheckoutWorkflow.class,
                 workflowId
@@ -51,18 +50,14 @@ public class AuctionCheckoutStarter {
         workflow.submitShippingAddress(orderId, address);
     }
 
-    public void sendCheckoutCancelled(UUID orderId, String reason) {
-        String workflowId = "auction-checkout-" + getAuctionIdForOrder(orderId);
+    public void sendCheckoutCancelled(UUID orderId, UUID auctionId, String reason) {
+        String workflowId = "auction-checkout-" + auctionId;
         AuctionCheckoutWorkflow workflow = client.newWorkflowStub(
                 AuctionCheckoutWorkflow.class,
                 workflowId
         );
 
         workflow.cancelCheckout(orderId, reason);
-    }
-
-    private UUID getAuctionIdForOrder(UUID orderId) {
-        return orderService.getOrderById(orderId).auctionId();
     }
 
 }

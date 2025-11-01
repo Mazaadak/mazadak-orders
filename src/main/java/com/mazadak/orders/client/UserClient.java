@@ -12,5 +12,5 @@ import java.util.UUID;
 @FeignClient(name = "user-service")
 public interface UserClient {
     @GetMapping("/users/{user-id}")
-    public ResponseEntity<UserProfileResponse> getUser(@RequestHeader("user-id") UUID userId, @PathVariable("user-id") UUID user );
+    public ResponseEntity<UserProfileResponse> getUser(@RequestHeader("X-User-Id") UUID userId, @PathVariable("user-id") UUID user );
 }
