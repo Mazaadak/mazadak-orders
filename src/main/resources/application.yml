@@ -54,3 +54,6 @@ logging:
 
 springdoc:
   show-spring-cloud-functions: false
+
+temporal:
+  address: ${TEMPORAL_ADDRESS:127.0.0.1:7233}

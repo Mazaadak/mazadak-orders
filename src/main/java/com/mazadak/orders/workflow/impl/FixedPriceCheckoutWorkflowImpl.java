@@ -97,7 +97,7 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
                 throw new CheckoutTimeoutException("Payment not authorized within " + 15 + " minutes"); // TODO make dynamic
             }
 
-            // 6. Associate a paayment intent with order
+            // 6. Associate a payment intent with order
             checkoutActivities.setOrderPaymentIntentId(this.currentOrderId, currentPaymentIntentId);
             log.info("Authorized payment for order {}", this.currentOrderId);
 

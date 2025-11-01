@@ -109,8 +109,10 @@ public class OrderController {
 
     @PostMapping("/checkout")
     public ResponseEntity<Map<String,String>> checkout(
-            @RequestHeader("Idempotency-Key") @NotNull UUID idempotencyKey,
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @Valid @RequestBody CheckoutRequest request) {
+        // TODO: authorize
         WorkflowExecution exec = orderService.checkout(idempotencyKey, request);
         return ResponseEntity.accepted().body(Map.of(
                 "workflowId", exec.getWorkflowId(),

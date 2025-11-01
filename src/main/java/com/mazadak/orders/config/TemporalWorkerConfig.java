@@ -17,8 +17,10 @@ import io.temporal.client.WorkflowClientOptions;
 import io.temporal.common.converter.DefaultDataConverter;
 import io.temporal.common.converter.JacksonJsonPayloadConverter;
 import io.temporal.serviceclient.WorkflowServiceStubs;
+import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
@@ -26,10 +28,17 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class TemporalWorkerConfig {
+    @Value("${temporal.address:localhost:7233}")
+    private String temporalAddress;
+
     @Bean
     public WorkflowServiceStubs workflowServiceStubs() {
-        // Connects to the Temporal server (default: localhost:7233)
-        return WorkflowServiceStubs.newLocalServiceStubs();
+        // Connect to Temporal server using configured address
+        return WorkflowServiceStubs.newServiceStubs(
+                WorkflowServiceStubsOptions.newBuilder()
+                        .setTarget(temporalAddress)
+                        .build()
+        );
     }
 
     @Bean
