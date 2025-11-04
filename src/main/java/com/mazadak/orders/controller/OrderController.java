@@ -203,6 +203,7 @@ public class OrderController {
                     return ResponseEntity.ok(new CheckoutStatusResponse("RUNNING", null, null));
             }
         } catch (Exception e) {
+            log.error("Failed to get checkout status for order {}, reason {}", orderId, e.getMessage());
             return ResponseEntity.notFound().build();
         }
     }

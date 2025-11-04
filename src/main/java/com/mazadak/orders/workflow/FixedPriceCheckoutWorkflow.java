@@ -1,5 +1,6 @@
 package com.mazadak.orders.workflow;
 
+import com.mazadak.orders.dto.internal.WorkflowResult;
 import com.mazadak.orders.dto.request.CheckoutRequest;
 import com.mazadak.orders.dto.response.OrderResponse;
 import io.temporal.workflow.SignalMethod;
@@ -10,7 +11,7 @@ import java.util.UUID;
 @WorkflowInterface
 public interface FixedPriceCheckoutWorkflow {
     @WorkflowMethod
-    OrderResponse processCheckout(CheckoutRequest request, UUID idempotencyKey);
+    WorkflowResult processCheckout(CheckoutRequest request, UUID idempotencyKey);
 
     @SignalMethod
     void paymentAuthorized(UUID orderId, String paymentIntentId);

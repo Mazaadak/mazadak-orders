@@ -1,5 +1,6 @@
 package com.mazadak.orders.workflow.impl;
 
+import com.mazadak.orders.dto.internal.WorkflowResult;
 import com.mazadak.orders.exception.CheckoutCancelledException;
 import com.mazadak.orders.exception.CheckoutTimeoutException;
 import com.mazadak.orders.model.entity.Address;
@@ -52,18 +53,19 @@ public class AuctionCheckoutWorkflowImpl implements AuctionCheckoutWorkflow {
     private boolean checkoutCancelled = false;
     private String cancellationReason;
 
-    public void processAuctionCheckout(AuctionCheckoutRequest request) {
+    public WorkflowResult processAuctionCheckout(AuctionCheckoutRequest request) {
         log.info("Starting auction workflow for auction {}", request.auction().id());
 
         for (var bidder : request.bidders()) {
             if (processBidderCheckout(request, bidder)) {
                 log.info("Auction checkout completed successfully with bidder {}", bidder.id());
-                return;
+                return new WorkflowResult(true, "Checkout completed successfully", null);
             }
         }
 
         log.error("All bidders failed checkout for auction {}", request.auction().id());
         auctionActivities.emitAuctionInvalidEvent(request.auction().id());
+        return new WorkflowResult(false, "All bidders failed checkout", "No bidders completed checkout");
     }
 
     public boolean processBidderCheckout(AuctionCheckoutRequest request, AuctionCheckoutRequest.BidderInfo bidder) {

@@ -1,6 +1,7 @@
 package com.mazadak.orders.workflow;
 
 import com.mazadak.orders.dto.internal.AuctionCheckoutRequest;
+import com.mazadak.orders.dto.internal.WorkflowResult;
 import com.mazadak.orders.model.entity.Address;
 import io.temporal.workflow.SignalMethod;
 import io.temporal.workflow.WorkflowInterface;
@@ -11,7 +12,7 @@ import java.util.UUID;
 @WorkflowInterface
 public interface AuctionCheckoutWorkflow {
     @WorkflowMethod
-    void processAuctionCheckout(AuctionCheckoutRequest request);
+    WorkflowResult processAuctionCheckout(AuctionCheckoutRequest request);
 
     @SignalMethod
     void submitShippingAddress(UUID orderId, Address address);

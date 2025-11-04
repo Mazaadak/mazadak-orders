@@ -30,14 +30,14 @@ public class AuctionCheckoutStarter {
         WorkflowClient.start(workflow::processAuctionCheckout, request);
     }
 
-    public void sendPaymentAuthorized(UUID auctionId, String paymentIntentId) {
+    public void sendPaymentAuthorized(UUID orderId, UUID auctionId, String paymentIntentId) {
         String workflowId = "auction-checkout-" + auctionId;
         AuctionCheckoutWorkflow workflow = client.newWorkflowStub(
                 AuctionCheckoutWorkflow.class,
                 workflowId
         );
 
-        workflow.paymentAuthorized(auctionId, paymentIntentId);
+        workflow.paymentAuthorized(orderId, paymentIntentId);
     }
 
     public void sendAddressProvided(UUID orderId, UUID auctionId, Address address) {

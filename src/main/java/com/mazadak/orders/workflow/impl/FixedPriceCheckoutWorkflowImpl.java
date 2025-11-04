@@ -1,5 +1,6 @@
 package com.mazadak.orders.workflow.impl;
 
+import com.mazadak.orders.dto.internal.WorkflowResult;
 import com.mazadak.orders.exception.CheckoutCancelledException;
 import com.mazadak.orders.exception.CheckoutTimeoutException;
 import com.mazadak.orders.model.enumeration.PaymentStatus;
@@ -55,7 +56,7 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
     );
 
     @Override
-    public OrderResponse processCheckout(CheckoutRequest request, UUID idempotencyKey) {
+    public WorkflowResult processCheckout(CheckoutRequest request, UUID idempotencyKey) {
         Saga saga = new Saga(new Saga.Options.Builder()
                 .setParallelCompensation(false)
                 .setContinueWithError(false)
@@ -124,7 +125,7 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
             // 11. Update order status to be completed
             checkoutActivities.markOrderAsCompleted(currentOrderId);
 
-            return order;
+            return new WorkflowResult(true, "Checkout completed successfully", null);
 
         } catch (Exception e) {
 
@@ -143,7 +144,7 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
                 }
             }
 
-            throw Workflow.wrap(e);
+            return new WorkflowResult(false, "Checkout failed", e.getMessage());
         }
     }
 

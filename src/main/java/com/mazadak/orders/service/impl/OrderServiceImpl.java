@@ -247,6 +247,7 @@ public class OrderServiceImpl implements OrderService {
             );
         } else {
             auctionCheckoutStarter.sendPaymentAuthorized(
+                    orderId,
                     order.getAuctionId(),
                     paymentIntentId
             );
