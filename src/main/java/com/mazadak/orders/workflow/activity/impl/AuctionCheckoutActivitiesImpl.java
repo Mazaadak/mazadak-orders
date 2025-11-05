@@ -10,6 +10,7 @@ import com.mazadak.orders.dto.event.AuctionCheckoutStartedEvent;
 import com.mazadak.orders.workflow.activity.AuctionCheckoutActivities;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +23,9 @@ public class AuctionCheckoutActivitiesImpl implements AuctionCheckoutActivities 
     private final StreamBridge streamBridge;
     private final OrderService orderService;
 
+    @Value("${auction-checkout.url}")
+    private String auctionCheckoutUrl;
+
     @Override
     public UUID createOrderForWinner(AuctionResponse auction, AuctionCheckoutRequest.BidderInfo bidder) {
         return orderService.createOrderForWinner(auction, bidder);
@@ -30,7 +34,7 @@ public class AuctionCheckoutActivitiesImpl implements AuctionCheckoutActivities 
     @Override
     public void notifyWinnerToCheckout(AuctionCheckoutRequest.BidderInfo bidder, String email, UUID orderId) {
         log.info("User {} should checkout for order {}", bidder.id(), orderId);
-        var checkoutUrl = "http://localhost:3000/checkout/" + orderId; // TODO: configure
+        var checkoutUrl = auctionCheckoutUrl + orderId;
         streamBridge.send("auctionCheckoutStarted-out-0", new AuctionCheckoutStartedEvent(orderId, email, bidder, checkoutUrl)); // TODO extract binding name to constant wrapper class
     }
 

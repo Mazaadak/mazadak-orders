@@ -57,3 +57,6 @@ springdoc:
 
 temporal:
   address: ${TEMPORAL_ADDRESS:127.0.0.1:7233}
+
+auction-checkout:
+  url: "http://localhost:5173/auction-checkout/"
