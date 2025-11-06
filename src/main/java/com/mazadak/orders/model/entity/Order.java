@@ -47,6 +47,8 @@ public class Order extends BaseEntity {
 
     private String paymentIntentId;
 
+    private String clientSecret;
+
     private UUID auctionId;
 
     private UUID cartId;

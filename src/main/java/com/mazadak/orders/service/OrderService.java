@@ -34,4 +34,8 @@ public interface OrderService {
     String getWorkflowIdForOrder(Order order);
     String getWorkflowIdByOrderId(UUID orderId);
     void authorizePayment(UUID orderId, String paymentIntentId);
+
+    void attachIntent(UUID orderId, String paymentIntentId, String clientSecret);
+
+    void setClientSecret(UUID currentOrderId, String clientSecret);
 }

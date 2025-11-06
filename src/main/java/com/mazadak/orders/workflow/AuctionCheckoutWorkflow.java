@@ -22,4 +22,7 @@ public interface AuctionCheckoutWorkflow {
 
     @SignalMethod
     void cancelCheckout(UUID orderId, String reason);
+
+    @SignalMethod
+    void intentCreated(UUID orderId, String paymentIntentId, String clientSecret);
 }

@@ -255,6 +255,40 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public void attachIntent(UUID orderId, String paymentIntentId, String clientSecret) {
+        log.info("Attaching intent {} to order {}", paymentIntentId, orderId);
+        var order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "Id", orderId.toString()));
+
+        var id = getWorkflowIdForOrder(order);
+
+        if (order.getType() == OrderType.FIXED_PRICE) {
+            fixedPriceCheckoutStarter.sendIntentCreated(
+                    order.getIdempotencyKey(),
+                    orderId,
+                    paymentIntentId,
+                    clientSecret
+            );
+        } else {
+            auctionCheckoutStarter.sendIntentCreated(
+                    orderId,
+                    order.getAuctionId(),
+                    paymentIntentId,
+                    clientSecret
+            );
+        }
+    }
+
+    @Override
+    public void setClientSecret(UUID orderId, String clientSecret) {
+        var order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId.toString()));
+
+        order.setClientSecret(clientSecret);
+        orderRepository.save(order);
+    }
+
+    @Override
     public String getWorkflowIdForOrder(Order order) {
         return order.getType() == OrderType.FIXED_PRICE ?
                 "fixed-price-checkout-" + order.getIdempotencyKey() :

@@ -26,10 +26,12 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
     private static final Logger log = Workflow.getLogger(AuctionCheckoutWorkflowImpl.class);
     private UUID currentOrderId;
     private String currentPaymentIntentId;
+    private String clientSecret;
     private String cancellationReason;
 
     private boolean paymentAuthorized = false;
     private boolean checkoutCancelled = false;
+    private boolean intentCreated = false;
 
     private final FixedPriceCheckoutActivities fixedPriceCheckoutActivities = Workflow.newActivityStub(
             FixedPriceCheckoutActivities.class,
@@ -85,7 +87,26 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
                     () -> fixedPriceCheckoutActivities.releaseInventoryReservations(currentOrderId, reservationIds)
             );
 
-            // 5. Wait for payment authorization
+            // 5. Wait for intent creation
+            boolean isIntentCreated = Workflow.await(
+                    Duration.ofMinutes(15), // TODO make dynamic
+                    () -> intentCreated || checkoutCancelled
+            );
+
+            if (checkoutCancelled) {
+                throw new CheckoutCancelledException("Checkout cancelled during intent creation: " + cancellationReason);
+            }
+
+            if (!intentCreated) {
+                throw new CheckoutTimeoutException("Intent not created within " + 15 + " minutes");
+            }
+
+            // 6. Associate payment intent and client secret with order
+            checkoutActivities.setOrderPaymentIntentId(this.currentOrderId, currentPaymentIntentId);
+            checkoutActivities.setOrderClientSecret(currentOrderId, clientSecret);
+            log.info("Payment intent created and associated for order {}", currentOrderId);
+
+            // 7. Wait for payment authorization
             boolean isPaymentAuthorized = Workflow.await(
                     Duration.ofMinutes(15), // TODO make dynamic
                     () -> paymentAuthorized || checkoutCancelled
@@ -99,34 +120,31 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
                 throw new CheckoutTimeoutException("Payment not authorized within " + 15 + " minutes"); // TODO make dynamic
             }
 
-            // 6. Associate a payment intent with order
-            checkoutActivities.setOrderPaymentIntentId(this.currentOrderId, currentPaymentIntentId);
             log.info("Authorized payment for order {}", this.currentOrderId);
 
             checkoutActivities.setOrderPaymentStatus(this.currentOrderId, PaymentStatus.AUTHORIZED);
 
-            // 7. If payment authorized, confirm reservation
+            // 8. If payment authorized, confirm reservation
             fixedPriceCheckoutActivities.confirmInventoryReservations(order.id(), reservationIds);
 
-            // 8. Capture payment
+            // 9. Capture payment
             checkoutActivities.capturePayment(this.currentOrderId);
             saga.addCompensation(() -> checkoutActivities.refundPayment(this.currentOrderId));
 
             checkoutActivities.setOrderPaymentStatus(this.currentOrderId, PaymentStatus.CAPTURED);
 
-            // 9. Clear and activate cart
+            // 10. Clear and activate cart
             fixedPriceCheckoutActivities.clearCart(request.userId());
             fixedPriceCheckoutActivities.activateCart(request.userId());
 
 
-            // 10. Send notifications (TODO: Implement notifications)
+            // 11. Send notifications (TODO: Implement notifications)
             checkoutActivities.sendCheckoutSucessfulNotification(currentOrderId, order.buyerId());
 
-            // 11. Update order status to be completed
+            // 12. Update order status to be completed
             checkoutActivities.markOrderAsCompleted(currentOrderId);
 
             return new WorkflowResult(true, "Checkout completed successfully", null);
-
         } catch (Exception e) {
 
             log.error("Error during checkout process", e);
@@ -191,5 +209,31 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
         this.cancellationReason = reason;
 
         log.info("Checkout cancellation accepted for order: {}, reason: {}", orderId, cancellationReason);
+    }
+
+    @Override
+    public void intentCreated(UUID orderId, String paymentIntentId, String clientSecret) {
+        log.info("Signal received: intentCreated for order: {}, intentId: {}", orderId, paymentIntentId);
+
+        if (!orderId.equals(currentOrderId)) {
+            log.warn("Ignoring intent creation for non-current order: {} (current: {})", orderId, currentOrderId);
+            return;
+        }
+
+        if (intentCreated) {
+            log.warn("Intent already created for order {}, ignoring duplicate", orderId);
+            return;
+        }
+
+        if (checkoutCancelled) {
+            log.warn("Checkout is cancelled for order {}, ignoring intent creation", orderId);
+            return;
+        }
+
+        this.currentPaymentIntentId = paymentIntentId;
+        this.clientSecret = clientSecret;
+        this.intentCreated = true;
+
+        log.info("Intent creation accepted for order: {}", orderId);
     }
 }

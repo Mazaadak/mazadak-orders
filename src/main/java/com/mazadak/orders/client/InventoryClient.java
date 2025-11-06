@@ -3,6 +3,7 @@ package com.mazadak.orders.client;
 import com.mazadak.orders.dto.request.ConfirmReservationRequest;
 import com.mazadak.orders.dto.request.ReleaseReservationRequest;
 import com.mazadak.orders.dto.request.ReserveInventoryRequest;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,8 +27,7 @@ public interface InventoryClient {
     );
 
     @PostMapping("/inventories/reservations/release")
-    void releaseInventoryReservations(
-            @RequestHeader("Idempotency-Key") UUID idempotencyKey,
-            @RequestBody ReleaseReservationRequest request
-    );
+    public ResponseEntity<Void> releaseReservation(
+            @RequestHeader("Idempotency-Key") @NotNull UUID idempotencyKey,
+            @NotNull @RequestBody List<UUID> reservationIds);
 }

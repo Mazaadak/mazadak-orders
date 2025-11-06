@@ -96,4 +96,10 @@ public class CheckoutActivitiesImpl implements CheckoutActivities {
         log.info("Checkout sucessful for user {}. Order {}", userId, orderId);
         streamBridge.send("checkoutSuccessful-out-0", new CheckoutSuccessfulEvent(orderId, userId));
     }
+
+    @Override
+    public void setOrderClientSecret(UUID currentOrderId, String clientSecret) {
+        log.info("Setting client secret for order {}", currentOrderId);
+        orderService.setClientSecret(currentOrderId, clientSecret);
+    }
 }

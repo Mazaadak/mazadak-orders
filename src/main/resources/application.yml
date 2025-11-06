@@ -19,7 +19,7 @@ spring:
     bus:
       enabled: false
     function:
-      definition: auctionEndedEventConsumer;paymentAuthorizedEventConsumer
+      definition: auctionEndedEventConsumer;paymentAuthorizedEventConsumer;intentCreatedEventConsumer
     stream:
       bindings:
         auctionEndedEventConsumer-in-0:
@@ -27,6 +27,9 @@ spring:
           group: order-service
         paymentAuthorizedEventConsumer-in-0:
           destination: payment-authorized
+          group: order-service
+        intentCreatedEventConsumer-in-0:
+          destination: intent-created
           group: order-service
         auctionCheckoutStarted-out-0:
           destination: auction-checkout-started

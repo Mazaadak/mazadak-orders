@@ -54,4 +54,14 @@ public class FixedPriceCheckoutStarter {
 
         workflow.cancelCheckout(orderId, reason);
     }
+
+    public void sendIntentCreated(UUID idempotencyKey, UUID orderId, String paymentIntentId, String clientSecret) {
+        String workflowId = "fixed-price-checkout-" + idempotencyKey;
+        FixedPriceCheckoutWorkflow workflow = client.newWorkflowStub(
+                FixedPriceCheckoutWorkflow.class,
+                workflowId
+        );
+
+        workflow.intentCreated(orderId, paymentIntentId, clientSecret);
+    }
 }

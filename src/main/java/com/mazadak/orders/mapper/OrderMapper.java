@@ -16,6 +16,7 @@ public class OrderMapper {
                 order.getPaymentStatus(),
                 OrderItemMapper.toResponse(order.getOrderItems()),
                 order.getPaymentIntentId(),
+                order.getClientSecret(),
                 order.getAuctionId(),
                 order.getCartId()
         );

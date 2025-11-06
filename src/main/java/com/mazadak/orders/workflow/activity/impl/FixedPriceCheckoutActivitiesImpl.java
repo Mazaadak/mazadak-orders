@@ -87,10 +87,8 @@ public class FixedPriceCheckoutActivitiesImpl implements FixedPriceCheckoutActiv
     @Override
     public void releaseInventoryReservations(UUID orderId, List<UUID> reservationIds) {
         log.info("Releasing inventory reservations for order {} and reservationIds {}", orderId, reservationIds);
-        ReleaseReservationRequest request =new ReleaseReservationRequest(reservationIds, orderId);
-        UUID idempotencyKey = UUID.randomUUID();
-        inventoryClient.releaseInventoryReservations(idempotencyKey, request);
+        UUID idempotencyKey = UUID.randomUUID(); // TODO move to workflow
+        inventoryClient.releaseReservation(idempotencyKey, reservationIds);
         log.info("Released inventory reservations for order {} and reservationIds {}", orderId, reservationIds);
     }
-
 }

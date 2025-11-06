@@ -19,4 +19,6 @@ public interface CheckoutActivities {
     void setOrderPaymentStatus(UUID orderId, PaymentStatus status);
     String fetchUserEmail(UUID userId);
     void sendCheckoutSucessfulNotification(UUID orderId, UUID userId);
+
+    void setOrderClientSecret(UUID currentOrderId, String clientSecret);
 }

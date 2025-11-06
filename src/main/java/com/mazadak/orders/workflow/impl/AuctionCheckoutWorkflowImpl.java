@@ -47,10 +47,13 @@ public class AuctionCheckoutWorkflowImpl implements AuctionCheckoutWorkflow {
     private UUID currentOrderId;
     private String currentPaymentIntentId;
     private Address shippingAddress;
+    private String clientSecret;
 
     private boolean addressProvided = false;
+    private boolean intentCreated = false;
     private boolean paymentAuthorized = false;
     private boolean checkoutCancelled = false;
+
     private String cancellationReason;
 
     public WorkflowResult processAuctionCheckout(AuctionCheckoutRequest request) {
@@ -115,7 +118,26 @@ public class AuctionCheckoutWorkflowImpl implements AuctionCheckoutWorkflow {
 
             // TODO: may add a payment notification step
 
-            // STEP 5: wait for payment authorization
+            // STEP 5: wait for intent creation
+            boolean isIntentCreated = Workflow.await(
+                    Duration.ofMinutes(15), // TODO make dynamic
+                    () -> intentCreated || checkoutCancelled
+            );
+
+            if (checkoutCancelled) {
+                throw new CheckoutCancelledException("Checkout cancelled during intent creation: " + cancellationReason);
+            }
+
+            if (!intentCreated) {
+                throw new CheckoutTimeoutException("Intent not created within " + 15 + " minutes");
+            }
+
+            // STEP 6: associate payment intent with order
+            checkoutActivities.setOrderPaymentIntentId(currentOrderId, currentPaymentIntentId);
+            checkoutActivities.setOrderClientSecret(currentOrderId, clientSecret);
+            log.info("Payment intent created and associated for order {}", currentOrderId);
+
+            // STEP 7: wait for payment authorization
             boolean isPaymentAuthorized = Workflow.await(
                     Duration.ofMinutes(15), // TODO make dynamic
                     () -> paymentAuthorized || checkoutCancelled
@@ -129,8 +151,6 @@ public class AuctionCheckoutWorkflowImpl implements AuctionCheckoutWorkflow {
                 throw new CheckoutTimeoutException("Payment not authorized within " + 15 + " minutes");
             }
 
-            // STEP 7: associate payment intent with order
-            checkoutActivities.setOrderPaymentIntentId(currentOrderId, currentPaymentIntentId);
             log.info("User {} authorized payment for order {}, auction {}", bidder.id(), currentOrderId, request.auction().id());
 
             checkoutActivities.setOrderPaymentStatus(currentOrderId, PaymentStatus.AUTHORIZED);
@@ -169,8 +189,10 @@ public class AuctionCheckoutWorkflowImpl implements AuctionCheckoutWorkflow {
         log.warn("Checkout failed for order: {}, reason: {}", currentOrderId, reason);
         checkoutActivities.markOrderAsFailed(currentOrderId);
 
-        log.info("Cancelling unauthorized payment intent for failed order: {}", currentOrderId);
-        checkoutActivities.cancelPaymentIntent(currentOrderId);
+        if (intentCreated) {
+            log.info("Cancelling unauthorized payment intent for failed order: {}", currentOrderId);
+            checkoutActivities.cancelPaymentIntent(currentOrderId);
+        }
     }
 
     @Override
@@ -200,6 +222,7 @@ public class AuctionCheckoutWorkflowImpl implements AuctionCheckoutWorkflow {
 
     @Override
     public void paymentAuthorized(UUID orderId, String paymentIntentId) {
+        // TODO remove paymentIntentId here
         log.info("Signal received: paymentAuthorized for order: {}, intentId: {}", orderId, paymentIntentId);
 
         if (!orderId.equals(currentOrderId)) {
@@ -248,11 +271,44 @@ public class AuctionCheckoutWorkflowImpl implements AuctionCheckoutWorkflow {
         log.info("Checkout cancellation accepted for order: {}, reason: {}", orderId, cancellationReason);
     }
 
+    @Override
+    public void intentCreated(UUID orderId, String paymentIntentId, String clientSecret) {
+        log.info("Signal received: intentCreated for order: {}, intentId: {}", orderId, paymentIntentId);
+
+        if (!orderId.equals(currentOrderId)) {
+            log.warn("Ignoring intent creation for non-current order: {} (current: {})", orderId, currentOrderId);
+            return;
+        }
+
+        if (!addressProvided) {
+            log.warn("Cannot create intent before address is provided for order {}", orderId);
+            return;
+        }
+
+        if (intentCreated) {
+            log.warn("Intent already created for order {}, ignoring duplicate", orderId);
+            return;
+        }
+
+        if (checkoutCancelled) {
+            log.warn("Checkout is cancelled for order {}, ignoring intent creation", orderId);
+            return;
+        }
+
+        this.currentPaymentIntentId = paymentIntentId;
+        this.clientSecret = clientSecret;
+        this.intentCreated = true;
+
+        log.info("Intent creation accepted for order: {}", orderId);
+    }
+
     private void resetWorkflowState() {
         this.currentOrderId = null;
         this.currentPaymentIntentId = null;
+        this.clientSecret = null;
         this.shippingAddress = null;
         this.addressProvided = false;
+        this.intentCreated = false;
         this.paymentAuthorized = false;
         this.checkoutCancelled = false;
         this.cancellationReason = null;

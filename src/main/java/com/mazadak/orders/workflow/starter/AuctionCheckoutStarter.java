@@ -60,4 +60,13 @@ public class AuctionCheckoutStarter {
         workflow.cancelCheckout(orderId, reason);
     }
 
+    public void sendIntentCreated(UUID orderId, UUID auctionId, String paymentIntentId, String clientSecret) {
+        String workflowId = "auction-checkout-" + auctionId;
+        AuctionCheckoutWorkflow workflow = client.newWorkflowStub(
+                AuctionCheckoutWorkflow.class,
+                workflowId
+        );
+
+        workflow.intentCreated(orderId, paymentIntentId, clientSecret);
+    }
 }
