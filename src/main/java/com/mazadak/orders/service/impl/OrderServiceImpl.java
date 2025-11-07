@@ -10,6 +10,7 @@ import com.mazadak.orders.dto.request.CheckoutRequest;
 import com.mazadak.orders.dto.request.OrderFilterDto;
 import com.mazadak.orders.dto.response.OrderResponse;
 import com.mazadak.orders.dto.response.ProductResponseDTO;
+import com.mazadak.orders.exception.AmountTooLargeException;
 import com.mazadak.orders.exception.ResourceNotFoundException;
 import com.mazadak.orders.mapper.OrderMapper;
 import com.mazadak.orders.model.entity.Address;
@@ -299,6 +300,16 @@ public class OrderServiceImpl implements OrderService {
 
         order.setClientSecret(clientSecret);
         orderRepository.save(order);
+    }
+
+    @Override
+    public void assertAmountNotTooLarge(UUID orderId) {
+        var order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId.toString()));
+
+        if (order.getTotalAmount().compareTo(BigDecimal.valueOf(999999)) > 0) {
+            throw new AmountTooLargeException(orderId, order.getTotalAmount());
+        }
     }
 
     @Override

@@ -80,14 +80,17 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
             // If we fail after this, we need to mark the order as failed
             saga.addCompensation(() -> checkoutActivities.markOrderAsFailed(currentOrderId));
 
-            // 4. Reserve inventory
+            // 4. Assert amount does not exceed limit
+            checkoutActivities.assertAmountNotTooLarge(order.id());
+
+            // 5. Reserve inventory
             List<UUID> reservationIds = fixedPriceCheckoutActivities.reserveInventory(order.id(), cart.cartItems());
             // If we fail after this, we need to release the inventory reservations
             saga.addCompensation(
                     () -> fixedPriceCheckoutActivities.releaseInventoryReservations(currentOrderId, reservationIds)
             );
 
-            // 5. Wait for intent creation
+            // 6. Wait for intent creation
             boolean isIntentCreated = Workflow.await(
                     Duration.ofMinutes(15), // TODO make dynamic
                     () -> intentCreated || checkoutCancelled
@@ -101,12 +104,12 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
                 throw new CheckoutTimeoutException("Intent not created within " + 15 + " minutes");
             }
 
-            // 6. Associate payment intent and client secret with order
+            // 7. Associate payment intent and client secret with order
             checkoutActivities.setOrderPaymentIntentId(this.currentOrderId, currentPaymentIntentId);
             checkoutActivities.setOrderClientSecret(currentOrderId, clientSecret);
             log.info("Payment intent created and associated for order {}", currentOrderId);
 
-            // 7. Wait for payment authorization
+            // 8. Wait for payment authorization
             boolean isPaymentAuthorized = Workflow.await(
                     Duration.ofMinutes(15), // TODO make dynamic
                     () -> paymentAuthorized || checkoutCancelled
@@ -124,24 +127,24 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
 
             checkoutActivities.setOrderPaymentStatus(this.currentOrderId, PaymentStatus.AUTHORIZED);
 
-            // 8. If payment authorized, confirm reservation
+            // 9. If payment authorized, confirm reservation
             fixedPriceCheckoutActivities.confirmInventoryReservations(order.id(), reservationIds);
 
-            // 9. Capture payment
+            // 10. Capture payment
             checkoutActivities.capturePayment(this.currentOrderId);
             saga.addCompensation(() -> checkoutActivities.refundPayment(this.currentOrderId));
 
             checkoutActivities.setOrderPaymentStatus(this.currentOrderId, PaymentStatus.CAPTURED);
 
-            // 10. Clear and activate cart
+            // 11. Clear and activate cart
             fixedPriceCheckoutActivities.clearCart(request.userId());
             fixedPriceCheckoutActivities.activateCart(request.userId());
 
 
-            // 11. Send notifications
+            // 12. Send notifications
             checkoutActivities.sendCheckoutSuccessfulNotification(currentOrderId, order.buyerId(), order.totalAmount());
 
-            // 12. Update order status to be completed
+            // 13. Update order status to be completed
             checkoutActivities.markOrderAsCompleted(currentOrderId);
 
             return new WorkflowResult(true, "Checkout completed successfully", null);

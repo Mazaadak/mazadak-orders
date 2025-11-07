@@ -21,4 +21,5 @@ public interface CheckoutActivities {
     String fetchUserEmail(UUID userId);
     void sendCheckoutSuccessfulNotification(UUID orderId, UUID buyerId, BigDecimal amount);
     void setOrderClientSecret(UUID currentOrderId, String clientSecret);
+    void assertAmountNotTooLarge(UUID orderId);
 }

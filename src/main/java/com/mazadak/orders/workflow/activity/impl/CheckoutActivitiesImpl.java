@@ -103,4 +103,10 @@ public class CheckoutActivitiesImpl implements CheckoutActivities {
         log.info("Setting client secret for order {}", currentOrderId);
         orderService.setClientSecret(currentOrderId, clientSecret);
     }
+
+    @Override
+    public void assertAmountNotTooLarge(UUID orderId) {
+        log.info("Checking whether amount is too large for order {}", orderId);
+        orderService.assertAmountNotTooLarge(orderId);
+    }
 }

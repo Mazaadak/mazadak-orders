@@ -38,4 +38,6 @@ public interface OrderService {
     void attachIntent(UUID orderId, String paymentIntentId, String clientSecret);
 
     void setClientSecret(UUID currentOrderId, String clientSecret);
+
+    void assertAmountNotTooLarge(UUID orderId);
 }

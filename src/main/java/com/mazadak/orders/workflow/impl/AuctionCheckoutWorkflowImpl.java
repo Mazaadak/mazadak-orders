@@ -91,14 +91,17 @@ public class AuctionCheckoutWorkflowImpl implements AuctionCheckoutWorkflow {
             saga.addCompensation(() -> checkoutActivities.cancelOrder(currentOrderId));
             log.info("Created order: {} for bidder {}", currentOrderId, bidder.id());
 
-            // STEP 1.5: fetch user email
+            // STEP 2: assert amount does not exceed limit
+            checkoutActivities.assertAmountNotTooLarge(currentOrderId);
+
+            // STEP 3: fetch user email
             var email = checkoutActivities.fetchUserEmail(bidder.id());
 
-            // STEP 2: notify winner to start checkout (sends email with checkout url)
+            // STEP 4: notify winner to start checkout (sends email with checkout url)
             auctionActivities.notifyWinnerToCheckout(bidder, email, currentOrderId);
             saga.addCompensation(() -> auctionActivities.notifyWinnerCheckoutFailed(bidder, email, currentOrderId));
 
-            // STEP 3: wait for shipping address
+            // STEP 5: wait for shipping address
             boolean receivedAddress = Workflow.await(
                     Duration.ofHours(24), // TODO make dynamic
                     () -> addressProvided || checkoutCancelled
@@ -112,13 +115,13 @@ public class AuctionCheckoutWorkflowImpl implements AuctionCheckoutWorkflow {
                 throw new CheckoutTimeoutException("Address not provided within " + 24 + " hours");
             }
 
-            // STEP 4: set order address
+            // STEP 6: set order address
             checkoutActivities.setOrderAddress(currentOrderId, shippingAddress);
             log.info("User {} provided address for order {}", bidder.id(), currentOrderId);
 
             // TODO: may add a payment notification step
 
-            // STEP 5: wait for intent creation
+            // STEP 7: wait for intent creation
             boolean isIntentCreated = Workflow.await(
                     Duration.ofMinutes(15), // TODO make dynamic
                     () -> intentCreated || checkoutCancelled
@@ -132,12 +135,12 @@ public class AuctionCheckoutWorkflowImpl implements AuctionCheckoutWorkflow {
                 throw new CheckoutTimeoutException("Intent not created within " + 15 + " minutes");
             }
 
-            // STEP 6: associate payment intent with order
+            // STEP 8: associate payment intent with order
             checkoutActivities.setOrderPaymentIntentId(currentOrderId, currentPaymentIntentId);
             checkoutActivities.setOrderClientSecret(currentOrderId, clientSecret);
             log.info("Payment intent created and associated for order {}", currentOrderId);
 
-            // STEP 7: wait for payment authorization
+            // STEP 9: wait for payment authorization
             boolean isPaymentAuthorized = Workflow.await(
                     Duration.ofMinutes(15), // TODO make dynamic
                     () -> paymentAuthorized || checkoutCancelled
@@ -155,19 +158,19 @@ public class AuctionCheckoutWorkflowImpl implements AuctionCheckoutWorkflow {
 
             checkoutActivities.setOrderPaymentStatus(currentOrderId, PaymentStatus.AUTHORIZED);
 
-            // STEP 8: capture payment
+            // STEP 10: capture payment
             checkoutActivities.capturePayment(currentOrderId);
             saga.addCompensation(() -> checkoutActivities.refundPayment(currentOrderId));
 
             checkoutActivities.setOrderPaymentStatus(currentOrderId, PaymentStatus.CAPTURED);
 
-            // STEP 9: emit auction completed event
+            // STEP 11: emit auction completed event
             auctionActivities.emitAuctionCompletedEvent(request.auction().id(), currentOrderId);
 
-            // STEP 10: send checkout successful notification
+            // STEP 12: send checkout successful notification
             checkoutActivities.sendCheckoutSuccessfulNotification(currentOrderId, bidder.id(), bidder.amount());
 
-            // STEP 11: mark order as completed
+            // STEP 13: mark order as completed
             checkoutActivities.markOrderAsCompleted(currentOrderId);
 
             log.info("Successful checkout completed for bidder {}", bidder.id());
