@@ -138,8 +138,8 @@ public class FixedPriceCheckoutWorkflowImpl implements FixedPriceCheckoutWorkflo
             fixedPriceCheckoutActivities.activateCart(request.userId());
 
 
-            // 11. Send notifications (TODO: Implement notifications)
-            checkoutActivities.sendCheckoutSucessfulNotification(currentOrderId, order.buyerId());
+            // 11. Send notifications
+            checkoutActivities.sendCheckoutSuccessfulNotification(currentOrderId, order.buyerId(), order.totalAmount());
 
             // 12. Update order status to be completed
             checkoutActivities.markOrderAsCompleted(currentOrderId);

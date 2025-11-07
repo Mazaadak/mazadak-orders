@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -92,9 +93,9 @@ public class CheckoutActivitiesImpl implements CheckoutActivities {
     }
 
     @Override
-    public void sendCheckoutSucessfulNotification(UUID orderId, UUID userId) {
-        log.info("Checkout sucessful for user {}. Order {}", userId, orderId);
-        streamBridge.send("checkoutSuccessful-out-0", new CheckoutSuccessfulEvent(orderId, userId));
+    public void sendCheckoutSuccessfulNotification(UUID orderId, UUID buyerId, BigDecimal amount) {
+        log.info("Checkout successful for buyer {}. Order {}", buyerId, orderId);
+        streamBridge.send("checkoutSuccessful-out-0", new CheckoutSuccessfulEvent(orderId, buyerId, amount));
     }
 
     @Override

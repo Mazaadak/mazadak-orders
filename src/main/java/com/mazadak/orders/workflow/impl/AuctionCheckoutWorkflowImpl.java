@@ -165,7 +165,7 @@ public class AuctionCheckoutWorkflowImpl implements AuctionCheckoutWorkflow {
             auctionActivities.emitAuctionCompletedEvent(request.auction().id(), currentOrderId);
 
             // STEP 10: send checkout successful notification
-            checkoutActivities.sendCheckoutSucessfulNotification(currentOrderId, bidder.id());
+            checkoutActivities.sendCheckoutSuccessfulNotification(currentOrderId, bidder.id(), bidder.amount());
 
             // STEP 11: mark order as completed
             checkoutActivities.markOrderAsCompleted(currentOrderId);
