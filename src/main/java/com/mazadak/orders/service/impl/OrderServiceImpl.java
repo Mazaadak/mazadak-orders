@@ -9,6 +9,7 @@ import com.mazadak.orders.dto.request.CheckoutRequest;
 import com.mazadak.orders.dto.request.OrderFilterDto;
 import com.mazadak.orders.dto.response.OrderResponse;
 import com.mazadak.orders.dto.response.ProductResponseDTO;
+import com.mazadak.orders.exception.AmountTooLargeException;
 import com.mazadak.orders.mapper.OrderMapper;
 import com.mazadak.orders.model.entity.Address;
 import com.mazadak.orders.model.entity.Order;
@@ -16,6 +17,7 @@ import com.mazadak.orders.model.entity.OrderItem;
 import com.mazadak.orders.model.enumeration.OrderStatus;
 import com.mazadak.orders.model.enumeration.OrderType;
 import com.mazadak.orders.model.enumeration.PaymentStatus;
+import com.mazadak.orders.repository.OrderItemRepository;
 import com.mazadak.orders.repository.OrderRepository;
 import com.mazadak.orders.repository.specification.OrderSpecifications;
 import com.mazadak.orders.service.OrderService;
@@ -47,11 +49,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
-    private final RepositoryMethodInvocationListener repositoryMethodInvocationListener;
-    private final WorkflowClient workflowClient;
     private final ProductClient productClient;
     private final FixedPriceCheckoutStarter fixedPriceCheckoutStarter;
     private final AuctionCheckoutStarter auctionCheckoutStarter;
+    private final OrderItemRepository orderItemRepository;
 
 
     @Override
@@ -108,7 +109,20 @@ public class OrderServiceImpl implements OrderService {
         order.setPaymentStatus(PaymentStatus.PENDING);
         order.setAuctionId(auction.id());
 
+        var orderItem = new OrderItem(
+                auction.productId(),
+                auction.sellerId(),
+                auction.title(),
+                bidder.amount(),
+                1,
+                bidder.amount(),
+                order
+        );
+        order.setOrderItems(List.of(orderItem));
+
+//        orderItemRepository.save(orderItem);
         var saved = orderRepository.save(order);
+
         return saved.getId();
     }
 
@@ -280,6 +294,16 @@ public class OrderServiceImpl implements OrderService {
 
         order.setClientSecret(clientSecret);
         orderRepository.save(order);
+    }
+
+    @Override
+    public void assertAmountNotTooLarge(UUID orderId) {
+        var order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId.toString()));
+
+        if (order.getTotalAmount().compareTo(BigDecimal.valueOf(999999)) > 0) {
+            throw new AmountTooLargeException(orderId, order.getTotalAmount());
+        }
     }
 
     @Override

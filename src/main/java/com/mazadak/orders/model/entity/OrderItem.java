@@ -20,8 +20,6 @@ public class OrderItem extends BaseEntity{
 
     private String productName;
 
-    private String productImageUrl;
-
     private BigDecimal unitPrice;
 
     private int quantity;

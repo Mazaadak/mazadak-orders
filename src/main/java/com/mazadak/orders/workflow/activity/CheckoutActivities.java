@@ -4,6 +4,7 @@ import com.mazadak.orders.model.entity.Address;
 import com.mazadak.orders.model.enumeration.PaymentStatus;
 import io.temporal.activity.ActivityInterface;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @ActivityInterface
@@ -18,7 +19,7 @@ public interface CheckoutActivities {
     void markOrderAsFailed(UUID orderId);
     void setOrderPaymentStatus(UUID orderId, PaymentStatus status);
     String fetchUserEmail(UUID userId);
-    void sendCheckoutSucessfulNotification(UUID orderId, UUID userId);
-
+    void sendCheckoutSuccessfulNotification(UUID orderId, UUID buyerId, BigDecimal amount);
     void setOrderClientSecret(UUID currentOrderId, String clientSecret);
+    void assertAmountNotTooLarge(UUID orderId);
 }

@@ -18,7 +18,8 @@ public class OrderMapper {
                 order.getPaymentIntentId(),
                 order.getClientSecret(),
                 order.getAuctionId(),
-                order.getCartId()
+                order.getCartId(),
+                order.getCreatedAt()
         );
     }
 }

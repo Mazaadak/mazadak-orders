@@ -13,7 +13,6 @@ public class OrderItemMapper {
                         item.getProductId(),
                         item.getSellerId(),
                         item.getProductName(),
-                        item.getProductImageUrl(),
                         item.getUnitPrice(),
                         item.getQuantity(),
                         item.getSubtotal()
