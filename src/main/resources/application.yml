@@ -3,18 +3,18 @@ spring:
     name: orders
   config:
     import: "optional:configserver:http://localhost:18071/"
-  datasource:
-    url: jdbc:h2:mem:orderdb;
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+#  datasource:
+#    url: jdbc:h2:mem:orderdb;
+#    driver-class-name: org.h2.Driver
+#    username: sa
+#    password:
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
-  h2:
-    console:
-      enabled: true
+#  h2:
+#    console:
+#      enabled: true
   cloud:
     bus:
       enabled: false
