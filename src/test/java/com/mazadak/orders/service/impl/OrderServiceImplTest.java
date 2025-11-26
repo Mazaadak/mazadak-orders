@@ -10,7 +10,6 @@ import com.mazadak.orders.dto.request.OrderFilterDto;
 import com.mazadak.orders.dto.response.OrderResponse;
 import com.mazadak.orders.dto.response.ProductResponseDTO;
 import com.mazadak.orders.exception.AmountTooLargeException;
-import com.mazadak.orders.exception.ResourceNotFoundException;
 import com.mazadak.orders.model.entity.Address;
 import com.mazadak.orders.model.entity.Order;
 import com.mazadak.orders.model.enumeration.OrderStatus;
@@ -37,6 +36,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
+import com.mazadak.common.exception.shared.ResourceNotFoundException;
+
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
