@@ -3,16 +3,9 @@ package com.mazadak.orders.controller;
 import com.mazadak.orders.dto.internal.CheckoutStatusResponse;
 import com.mazadak.orders.dto.internal.WorkflowResult;
 import com.mazadak.orders.dto.request.CheckoutRequest;
-import com.mazadak.orders.dto.request.CreateTestOrderRequest;
 import com.mazadak.orders.dto.request.OrderFilterDto;
-import com.mazadak.orders.dto.request.TestOrderItemRequest;
 import com.mazadak.orders.dto.response.OrderResponse;
 import com.mazadak.orders.model.entity.Address;
-import com.mazadak.orders.model.entity.Order;
-import com.mazadak.orders.model.entity.OrderItem;
-import com.mazadak.orders.model.enumeration.OrderStatus;
-import com.mazadak.orders.model.enumeration.OrderType;
-import com.mazadak.orders.model.enumeration.PaymentStatus;
 import com.mazadak.orders.repository.OrderItemRepository;
 import com.mazadak.orders.repository.OrderRepository;
 import com.mazadak.orders.service.OrderService;
@@ -32,7 +25,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -160,7 +152,7 @@ public class OrderController {
     }
 
     @GetMapping("/checkout/{orderId}/status")
-    public ResponseEntity<CheckoutStatusResponse> getListingCreationStatus(
+    public ResponseEntity<CheckoutStatusResponse> getCheckoutWorkflowStatus(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable UUID orderId) {
 
