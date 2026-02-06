@@ -7,11 +7,11 @@
 - The Orders Service is the owner of order state within the platform and orchestrates checkout workflows across multiple services.
 
 ## API Endpoints
-- See [Orders Service Wiki Page](https://github.com/Mazaadak/.github/wiki/Order-Service) for a detailed breakdown of the service's API endpoints
+- See [Orders Service Wiki Page](https://github.com/Mazaadak/.github/wiki/Orders-Service) for a detailed breakdown of the service's API endpoints
 - Swagger UI available at `http://localhost:18088/swagger-ui/index.html` when running locally
 
 ## How to Run
-You can run it via [Docker Compose](https://github.com/Mazaadak/mazadak-infrastructure) or [Kubernetes](https://github.com/Mazaadak/mazadak-k8s/)
+You can run it via [Docker Compose](https://github.com/Mazaadak/mazadak-infrastructure) <!-- or [Kubernetes](https://github.com/Mazaadak/mazadak-k8s/) -->
 
 ## Tech Stack
 - **Spring Boot 3.5.6** (Java 21) 
@@ -24,5 +24,5 @@ You can run it via [Docker Compose](https://github.com/Mazaadak/mazadak-infrastr
 - **Temporal** - Saga Workflow Management
 
 ## For Further Information
-Refer to [Orders Service Wiki Page](https://github.com/Mazaadak/.github/wiki/Order-Service).
+Refer to [Orders Service Wiki Page](https://github.com/Mazaadak/.github/wiki/Orders-Service).
 
